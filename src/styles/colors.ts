@@ -1,5 +1,6 @@
 const colors = {
   yellow: '#FFD60A',
+  yellow01: '#FFFAE1',
   gray01: '#666666',
   gray02: '#757575',
   gray03: '#EBEBEF',
@@ -11,6 +12,7 @@ const colors = {
   // Tailwind arbitrary value 클래스
   bg: {
     yellow: 'bg-[#FFD60A]',
+    yellow01: 'bg-[#FFFAE1]',
     gray01: 'bg-[#666666]',
     gray02: 'bg-[#757575]',
     gray03: 'bg-[#EBEBEF]',

@@ -10,10 +10,11 @@ interface FormErrors {
 }
 
 interface Props {
+  onLogin: () => void
   onSignup: () => void
 }
 
-export default function LoginScreen({ onSignup }: Props) {
+export default function LoginScreen({ onLogin, onSignup }: Props) {
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -39,10 +40,7 @@ export default function LoginScreen({ onSignup }: Props) {
     }
 
     // TODO: 실제 로그인 API 연동 시 교체
-    const isValidUser = false
-    if (!isValidUser) {
-      setErrors({ ...newErrors, login: '일치하는 회원 정보가 없어요. 다시 확인해주세요.' })
-    }
+    onLogin()
   }
 
   return (
