@@ -9,7 +9,11 @@ interface FormErrors {
   login: string
 }
 
-export default function LoginScreen() {
+interface Props {
+  onSignup: () => void
+}
+
+export default function LoginScreen({ onSignup }: Props) {
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -115,7 +119,7 @@ export default function LoginScreen() {
           <p className={styles.signupGuide}>처음이신가요?</p>
           <hr className={styles.signupDividerLine} />
         </div>
-        <button className={styles.signupButton}>회원가입</button>
+        <button className={styles.signupButton} onClick={onSignup}>회원가입</button>
       </div>
     </div>
   )
