@@ -1,9 +1,7 @@
+import LoginScreen from './screens/LoginScreen'
+
 function App() {
-  return (
-    <h1 className="text-3xl font-bold">
-      Hello world!
-    </h1>
-  )
+  return <LoginScreen />
 }
 
 export default App
