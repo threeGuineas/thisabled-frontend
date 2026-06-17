@@ -2,6 +2,7 @@ import { useState } from 'react'
 import styles from './BlindHomeScreen.styles'
 import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
 import BlindCommentsScreen from './BlindCommentsScreen'
+import BlindWriteScreen from './BlindWriteScreen'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
 import heartWIcon from '../assets/images/heart-w.svg'
@@ -51,6 +52,7 @@ export default function BlindHomeScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [likedCards, setLikedCards] = useState<Set<number>>(new Set())
   const [showComments, setShowComments] = useState(false)
+  const [showWrite, setShowWrite] = useState(false)
 
   const toggleLike = (id: number) => {
     setLikedCards((prev) => {
@@ -58,6 +60,10 @@ export default function BlindHomeScreen() {
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
+  }
+
+  if (showWrite) {
+    return <BlindWriteScreen onBack={() => setShowWrite(false)} />
   }
 
   if (showComments) {
@@ -74,7 +80,7 @@ export default function BlindHomeScreen() {
       </div>
 
       <div className={styles.section}>
-        <button type="button" className={styles.writeButton}>
+        <button type="button" onClick={() => setShowWrite(true)} className={styles.writeButton}>
           <img src={plusIcon} alt="글 쓰기 버튼" className={styles.plusIcon} />
           <span className={styles.writeText}>글 쓰기 · 음성으로 작성</span>
         </button>
@@ -150,7 +156,7 @@ export default function BlindHomeScreen() {
                   className={styles.cardFooterRight}
                 >
                   <img src={chatWIcon} alt="댓글 버튼" className={styles.cardFooterIcon} />
-                  <span className={styles.cardFooterText}>{card.comments}개 | 댓글보기</span>
+                  <span className={styles.cardFooterText}>{card.comments}개 | 댓글 보기</span>
                 </button>
               </div>
             </div>
