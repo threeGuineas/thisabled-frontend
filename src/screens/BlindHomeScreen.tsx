@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import styles from './BlindHomeScreen.styles'
 import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
+import BlindCommentsScreen from './BlindCommentsScreen'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
 import heartWIcon from '../assets/images/heart-w.svg'
@@ -49,6 +50,7 @@ export default function BlindHomeScreen() {
   const [activeFilter, setActiveFilter] = useState('전체')
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [likedCards, setLikedCards] = useState<Set<number>>(new Set())
+  const [showComments, setShowComments] = useState(false)
 
   const toggleLike = (id: number) => {
     setLikedCards((prev) => {
@@ -58,18 +60,22 @@ export default function BlindHomeScreen() {
     })
   }
 
+  if (showComments) {
+    return <BlindCommentsScreen onBack={() => setShowComments(false)} />
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <span className={styles.headerTitle}>홈</span>
         <div className={styles.searchIconWrapper}>
-          <img src={searchWIcon} alt="검색" className={styles.searchIcon} />
+          <img src={searchWIcon} alt="검색 창 버튼" className={styles.searchIcon} />
         </div>
       </div>
 
       <div className={styles.section}>
         <button type="button" className={styles.writeButton}>
-          <img src={plusIcon} alt="" className={styles.plusIcon} />
+          <img src={plusIcon} alt="글 쓰기 버튼" className={styles.plusIcon} />
           <span className={styles.writeText}>글 쓰기 · 음성으로 작성</span>
         </button>
       </div>
@@ -90,7 +96,7 @@ export default function BlindHomeScreen() {
       </div>
 
       <p className={styles.newPostsBadge}>
-        새 글 <span className={styles.newPostsCount}>4</span>개
+        새 글 <span className={styles.newPostsCount}>3</span>개
       </p>
 
       {/* 카드 스와이프 영역 */}
@@ -138,10 +144,14 @@ export default function BlindHomeScreen() {
                     {likedCards.has(card.id) ? card.likes + 1 : card.likes}개
                   </span>
                 </button>
-                <div className={styles.cardFooterRight}>
+                <button
+                  type="button"
+                  onClick={() => setShowComments(true)}
+                  className={styles.cardFooterRight}
+                >
                   <img src={chatWIcon} alt="댓글 버튼" className={styles.cardFooterIcon} />
                   <span className={styles.cardFooterText}>{card.comments}개 | 댓글보기</span>
-                </div>
+                </button>
               </div>
             </div>
           ))}

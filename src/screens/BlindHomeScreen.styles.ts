@@ -4,12 +4,12 @@ import typography from '../styles/typography'
 const styles = {
   container: 'min-h-screen bg-black flex flex-col pb-24',
 
-  header: 'flex items-center justify-between px-6 pt-14 pb-4',
+  header: 'flex items-center justify-between px-6 pt-7 pb-4',
   headerTitle: ['text-white', typography['3xl'], typography.bold].join(' '),
   searchIconWrapper: 'w-12 h-12 rounded-2xl bg-[#1F1F1F] flex items-center justify-center',
   searchIcon: 'w-6 h-6',
 
-  section: 'px-6 mt-2',
+  section: 'px-6',
 
   writeButton: [
     'w-full flex items-center justify-center gap-3',
