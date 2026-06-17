@@ -101,8 +101,8 @@ export default function BlindCommentsScreen({ onBack }: Props) {
 
         <div className={styles.sheetFooter}>
           <button type="button" className={styles.voiceButton}>
-            <img src={micWIcon} alt="음성 입력" className={styles.voiceIcon} />
-            <span className={styles.voiceText}>음성</span>
+            <img src={micWIcon} alt="" className={styles.voiceIcon} />
+            <span className={styles.voiceText}>음성 입력</span>
           </button>
           <button
             type="button"
@@ -111,7 +111,7 @@ export default function BlindCommentsScreen({ onBack }: Props) {
           >
             <img
               src={commentText.trim() ? sendIcon : sendGIcon}
-              alt="댓글 달기"
+              alt=""
               className={styles.submitIcon}
             />
             <span className={commentText.trim() ? styles.submitTextActive : styles.submitTextInactive}>

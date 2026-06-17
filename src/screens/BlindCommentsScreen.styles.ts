@@ -55,7 +55,7 @@ const styles = {
 
   sheetFooter: 'flex items-center justify-between mt-2',
   voiceButton: [
-    'flex items-center gap-2 border border-white/20 rounded-full px-10 py-5',
+    'flex items-center gap-2 border border-white/20 rounded-full px-8 py-5',
     'active:opacity-70',
   ].join(' '),
   voiceIcon: 'w-5 h-5',

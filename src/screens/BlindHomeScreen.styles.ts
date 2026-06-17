@@ -39,7 +39,7 @@ const styles = {
 
   // 카드 스와이프 영역
   cardScrollArea: 'mt-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-4',
-  cardScrollInner: 'flex gap-4',
+  cardScrollInner: 'flex gap-4 items-start',
 
   // 글 카드
   card: [
