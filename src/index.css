@@ -43,3 +43,10 @@
 * {
   font-family: 'Pretendard', sans-serif;
 }
+
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

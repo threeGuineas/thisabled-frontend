@@ -7,7 +7,7 @@ import normalIcon from '../assets/images/normal.svg'
 import checkY from '../assets/images/check-y.svg'
 import nextIcon from '../assets/images/next.svg'
 
-type Mode = 'visual' | 'hearing' | 'cognitive' | 'normal'
+export type Mode = 'visual' | 'hearing' | 'cognitive' | 'normal'
 
 interface ModeOption {
   id: Mode
