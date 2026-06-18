@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import styles from './BlindCommentsScreen.styles'
+import { useVoiceInput } from '../hooks/useVoiceInput'
 import backGIcon from '../assets/images/back-g.svg'
 import chatIcon from '../assets/images/chat.svg'
 import micWIcon from '../assets/images/mic-w.svg'
@@ -38,9 +39,32 @@ export default function BlindCommentsScreen({ onBack }: Props) {
   const [showSheet, setShowSheet] = useState(false)
   const [commentText, setCommentText] = useState('')
 
+  const { voiceState, voiceError, toggleRecording, stopRecording } = useVoiceInput((text) => {
+    setCommentText(prev => prev ? `${prev} ${text}` : text)
+  })
+
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
+
+  const handleCloseSheet = () => {
+    stopRecording()
+    setShowSheet(false)
+  }
+
+  const voiceButtonClass =
+    voiceState === 'recording' ? styles.voiceButtonRecording
+    : voiceState === 'transcribing' ? styles.voiceButtonTranscribing
+    : styles.voiceButton
+
+  const voiceIconClass =
+    voiceState === 'recording' ? styles.voiceIconRecording : styles.voiceIcon
+
+  const voiceLabel =
+    voiceState === 'recording' ? '녹음 중...'
+    : voiceState === 'transcribing' ? '인식 중...'
+    : voiceState === 'error' ? '다시 시도'
+    : '음성 입력'
 
   return (
     <div className={styles.container}>
@@ -80,14 +104,14 @@ export default function BlindCommentsScreen({ onBack }: Props) {
 
       {/* 오버레이 */}
       {showSheet && (
-        <div className={styles.overlay} onClick={() => setShowSheet(false)} />
+        <div className={styles.overlay} onClick={handleCloseSheet} />
       )}
 
       {/* 바텀시트 */}
       <div className={`${styles.bottomSheet} ${showSheet ? styles.bottomSheetOpen : styles.bottomSheetClosed}`}>
         <div className={styles.sheetHeader}>
           <span className={styles.sheetTitle}>댓글 달기</span>
-          <button type="button" onClick={() => setShowSheet(false)} className={styles.sheetCancelButton}>
+          <button type="button" onClick={handleCloseSheet} className={styles.sheetCancelButton}>
             취소
           </button>
         </div>
@@ -99,10 +123,19 @@ export default function BlindCommentsScreen({ onBack }: Props) {
           onChange={(e) => setCommentText(e.target.value)}
         />
 
+        {voiceError && (
+          <p className="mt-1 text-xs text-red-400">{voiceError}</p>
+        )}
+
         <div className={styles.sheetFooter}>
-          <button type="button" className={styles.voiceButton}>
-            <img src={micWIcon} alt="" className={styles.voiceIcon} />
-            <span className={styles.voiceText}>음성 입력</span>
+          <button
+            type="button"
+            onClick={toggleRecording}
+            disabled={voiceState === 'transcribing'}
+            className={voiceButtonClass}
+          >
+            <img src={micWIcon} alt="" className={voiceIconClass} />
+            <span className={styles.voiceText}>{voiceLabel}</span>
           </button>
           <button
             type="button"

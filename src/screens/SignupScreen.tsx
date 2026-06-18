@@ -4,11 +4,12 @@ import backIcon from '../assets/images/back.svg'
 import eyeOpen from '../assets/images/eye-open.svg'
 import eyeClosed from '../assets/images/eye-closed.svg'
 import checkIcon from '../assets/images/check.svg'
-import { register, tokenStorage } from '../services/auth'
+import { register, tokenStorage, type DisabilityType } from '../services/auth'
 
 interface Props {
+  disabilityType: DisabilityType
   onBack: () => void
-  onSuccess: () => void
+  onSuccess: (disabilityType: DisabilityType) => void
 }
 
 interface FormErrors {
@@ -17,7 +18,7 @@ interface FormErrors {
   passwordConfirm: string
 }
 
-export default function SignupScreen({ onBack, onSuccess }: Props) {
+export default function SignupScreen({ disabilityType, onBack, onSuccess }: Props) {
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -58,9 +59,9 @@ export default function SignupScreen({ onBack, onSuccess }: Props) {
     setLoading(true)
     setApiError('')
     try {
-      const { access_token } = await register(nickname.trim(), password, 'none')
+      const { access_token } = await register(nickname.trim(), password, disabilityType)
       tokenStorage.set(access_token)
-      onSuccess()
+      onSuccess(disabilityType)
     } catch (err: unknown) {
       console.error('[signup error]', err)
       const apiErr = err as { status?: number }

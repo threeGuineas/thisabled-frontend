@@ -1,4 +1,4 @@
-import { IS_MOCK_API, type DisabilityType } from '../services/auth'
+import { IS_MOCK_API, toggleMockApi, type DisabilityType } from '../services/auth'
 
 interface Props {
   onGoLogin: () => void
@@ -48,9 +48,13 @@ export default function TestScreen({ onGoLogin, onGoSignup, onGoOnboarding, onGo
       <div className="mt-14 mb-8">
         <div className="flex items-center gap-2 mb-1">
           <h1 className="text-2xl font-bold text-[#000000]">개발 테스트 메뉴</h1>
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${IS_MOCK_API ? 'bg-[#FFD60A] text-black' : 'bg-[#F7F7F9] text-[#9898A8] border border-[#EBEBEF]'}`}>
+          <button
+            type="button"
+            onClick={toggleMockApi}
+            className={`text-xs font-semibold px-2 py-0.5 rounded-full active:opacity-70 ${IS_MOCK_API ? 'bg-[#FFD60A] text-black' : 'bg-[#F7F7F9] text-[#9898A8] border border-[#EBEBEF]'}`}
+          >
             {IS_MOCK_API ? 'MOCK ON' : 'MOCK OFF'}
-          </span>
+          </button>
         </div>
         <p className="text-sm text-[#757575]">ThisAbled — 백엔드 없이 UI 테스트용 화면</p>
       </div>

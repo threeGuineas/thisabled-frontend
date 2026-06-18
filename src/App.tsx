@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import OnboardingScreen, { type Mode } from './screens/OnboardingScreen'
+import OnboardingScreen from './screens/OnboardingScreen'
 import LoginScreen from './screens/LoginScreen'
 import SignupScreen from './screens/SignupScreen'
 import BlindHomeScreen from './screens/BlindHomeScreen'
@@ -14,6 +14,7 @@ const INITIAL_SCREEN: Screen = import.meta.env.DEV ? 'test' : 'login'
 function App() {
   const [screen, setScreen] = useState<Screen>(INITIAL_SCREEN)
   const [toastMessage, setToastMessage] = useState('')
+  const [pendingMode, setPendingMode] = useState<DisabilityType>('none')
 
   const showToast = (message: string, onDone: () => void) => {
     setToastMessage(message)
@@ -25,24 +26,21 @@ function App() {
 
   const handleLoginSuccess = (disabilityType: DisabilityType) => {
     showToast('로그인이 완료되었습니다.', () => {
-      setScreen(disabilityType === 'visual' ? 'blindHome' : 'blindHome')
+      setScreen('blindHome')
       // TODO: 다른 장애 유형 화면 구현 후 라우팅 추가
     })
   }
 
-  const handleSignupSuccess = () => {
+  const handleOnboardingNext = (mode: DisabilityType) => {
+    setPendingMode(mode)
+    setScreen('signup')
+  }
+
+  const handleSignupSuccess = (disabilityType: DisabilityType) => {
     showToast('회원가입이 완료되었습니다.', () => {
-      setScreen('onboarding')
-    })
-  }
-
-  const handleOnboardingNext = (mode: Mode) => {
-    if (mode === 'visual') {
       setScreen('blindHome')
-    } else {
       // TODO: 다른 장애 유형 화면 구현 후 라우팅 추가
-      setScreen('blindHome')
-    }
+    })
   }
 
   const devTab = import.meta.env.DEV && screen !== 'test' && (
@@ -59,7 +57,7 @@ function App() {
     if (screen === 'test') return (
       <TestScreen
         onGoLogin={() => setScreen('login')}
-        onGoSignup={() => setScreen('signup')}
+        onGoSignup={() => { setPendingMode('none'); setScreen('signup') }}
         onGoOnboarding={() => setScreen('onboarding')}
         onGoHome={handleLoginSuccess}
       />
@@ -67,7 +65,8 @@ function App() {
     if (screen === 'onboarding') return <OnboardingScreen onNext={handleOnboardingNext} />
     if (screen === 'signup') return (
       <SignupScreen
-        onBack={() => setScreen('login')}
+        disabilityType={pendingMode}
+        onBack={() => setScreen('onboarding')}
         onSuccess={handleSignupSuccess}
       />
     )
@@ -75,7 +74,7 @@ function App() {
     return (
       <LoginScreen
         onLogin={handleLoginSuccess}
-        onSignup={() => setScreen('signup')}
+        onSignup={() => setScreen('onboarding')}
       />
     )
   })()

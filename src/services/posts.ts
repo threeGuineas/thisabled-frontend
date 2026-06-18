@@ -1,4 +1,4 @@
-import { tokenStorage } from './auth'
+import { tokenStorage, IS_MOCK } from './auth'
 
 export interface Post {
   id: number
@@ -8,9 +8,9 @@ export interface Post {
   created_at: string
 }
 
-export const API_BASE_URL = 'http://localhost:8000'
+export const API_BASE_URL = ''
 
-const IS_MOCK = import.meta.env.VITE_MOCK_API === 'true'
+
 const BASE_URL = API_BASE_URL
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 

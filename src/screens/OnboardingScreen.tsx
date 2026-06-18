@@ -6,25 +6,26 @@ import brainIcon from '../assets/images/brain.svg'
 import normalIcon from '../assets/images/normal.svg'
 import checkY from '../assets/images/check-y.svg'
 import nextIcon from '../assets/images/next.svg'
+import { type DisabilityType } from '../services/auth'
 
-export type Mode = 'visual' | 'hearing' | 'cognitive' | 'normal'
+export type Mode = DisabilityType
 
 interface ModeOption {
-  id: Mode
+  id: DisabilityType
   icon: string
   name: string
   description: string
 }
 
 const modes: ModeOption[] = [
-  { id: 'visual',    icon: eyeIcon,    name: '시각장애',  description: '음성 해설과 고대비 화면' },
-  { id: 'hearing',   icon: earIcon,    name: '청각장애',  description: '자막과 시각 알림 중심 화면' },
-  { id: 'cognitive', icon: brainIcon,  name: '발달장애',  description: '단순하고 직관적인 화면' },
-  { id: 'normal',    icon: normalIcon, name: '기본화면',  description: '표준 인터페이스' },
+  { id: 'visual',        icon: eyeIcon,    name: '시각장애',  description: '음성 해설과 고대비 화면' },
+  { id: 'hearing',       icon: earIcon,    name: '청각장애',  description: '자막과 시각 알림 중심 화면' },
+  { id: 'developmental', icon: brainIcon,  name: '발달장애',  description: '단순하고 직관적인 화면' },
+  { id: 'none',          icon: normalIcon, name: '기본화면',  description: '표준 인터페이스' },
 ]
 
 interface Props {
-  onNext: (mode: Mode) => void
+  onNext: (mode: DisabilityType) => void
 }
 
 export default function OnboardingScreen({ onNext }: Props) {

@@ -13,7 +13,10 @@ export interface MeResponse {
 
 // ── Mock (VITE_MOCK_API=true 일 때 백엔드 없이 동작) ──────────────────────
 
-const IS_MOCK = import.meta.env.VITE_MOCK_API === 'true'
+const _localMock = localStorage.getItem('mock_api')
+export const IS_MOCK = _localMock !== null
+  ? _localMock === 'true'
+  : import.meta.env.VITE_MOCK_API === 'true'
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // mock 토큰에 disability_type을 인코딩해서 getMe에서 읽음
@@ -49,7 +52,7 @@ const mockAuth = {
 
 // ── Real API ──────────────────────────────────────────────────────────────
 
-const BASE_URL = 'http://localhost:8000'
+const BASE_URL = ''
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -95,3 +98,8 @@ export const tokenStorage = {
 }
 
 export const IS_MOCK_API = IS_MOCK
+
+export function toggleMockApi() {
+  localStorage.setItem('mock_api', IS_MOCK ? 'false' : 'true')
+  window.location.reload()
+}
