@@ -15,7 +15,7 @@ const BASE_URL = API_BASE_URL
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 const MOCK_CONTENTS = [
-  '오늘 동네 공원을 한 바퀴 돌았어요. 벤치 옆 라일락 향이 진해서, 한참을 앉아 있었습니다.',
+  '오늘 처음 가본 동네 베이커리인데 크루아상이 정말 맛있었어요. 겉은 바삭하고 속은 촉촉해서 감동받았습니다. 근처 오시는 분들께 강추해요!',
   '점자 블록이 없는 횡단보도를 만났는데 너무 불편했어요. 이런 정보 같이 공유해요!',
   '주말에 같이 보드게임 하실 분 구해요. 초보도 환영합니다 :)',
   '요즘 독서에 빠졌어요. 추천 책 있으면 댓글로 알려주세요.',
@@ -23,7 +23,7 @@ const MOCK_CONTENTS = [
 ]
 
 const MOCK_IMAGES = [
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&q=80',
+  'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80',
   'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=400&q=80',
   'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&q=80',
   'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=400&q=80',

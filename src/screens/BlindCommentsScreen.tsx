@@ -13,21 +13,21 @@ const SAMPLE_COMMENTS = [
     nickname: '하늘산책',
     time: '10분 전',
     avatar: 'https://i.pravatar.cc/80?img=11',
-    body: '정말 공감돼요. 저도 봄만 되면 공원에 자주 나가게 되더라고요.',
+    body: '크루아상 맛집 정보 감사해요! 저도 버터 향 나는 빵 너무 좋아하는데 꼭 가봐야겠어요.',
   },
   {
     id: 2,
     nickname: '달빛여행',
     time: '10분 전',
     avatar: 'https://i.pravatar.cc/80?img=12',
-    body: '라일락 향기는 정말 특별하죠. 글 읽으면서 저도 그 향이 느껴지는 것 같았어요.',
+    body: '사진만 봐도 바삭한 소리가 들리는 것 같아요. 베이커리 이름이 어디예요?',
   },
   {
     id: 3,
     nickname: '봄바람',
     time: '10분 전',
     avatar: 'https://i.pravatar.cc/80?img=13',
-    body: '코로 먼저 봄을 안다는 표현이 너무 좋아요. 다음에 저도 한번 가봐야겠어요.',
+    body: '저도 주말에 동네 빵집 탐방 다니는 게 취미인데, 같이 다녀도 좋을 것 같아요!',
   },
 ]
 
@@ -76,7 +76,7 @@ export default function BlindCommentsScreen({ onBack }: Props) {
           <span className={styles.headerTitle}>
             댓글 <span className={styles.headerCount}>3개</span>
           </span>
-          <span className={styles.headerSubtitle}>봄날의소리 님의 글</span>
+          <span className={styles.headerSubtitle}>달콤한하루 님의 글</span>
         </div>
       </div>
 

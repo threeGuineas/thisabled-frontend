@@ -3,6 +3,7 @@ import styles from './BlindHomeScreen.styles'
 import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
 import BlindCommentsScreen from './BlindCommentsScreen'
 import BlindWriteScreen from './BlindWriteScreen'
+import BlindMyScreen from './BlindMyScreen'
 import { getPosts, type Post, API_BASE_URL } from '../services/posts'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
@@ -11,6 +12,12 @@ import heartBIcon from '../assets/images/heart-b.svg'
 import chatWIcon from '../assets/images/chat-w.svg'
 
 const LIMIT = 20
+
+const MOCK_NICKNAMES: Record<number, string> = {
+  1: '달콤한하루',
+  2: '하늘산책',
+  3: '달빛여행',
+}
 
 const FAKE_COUNTS = [
   { likes: 9, comments: 7 },
@@ -101,6 +108,10 @@ export default function BlindHomeScreen() {
     })
   }
 
+  if (activeTab === 'my') {
+    return <BlindMyScreen onTabChange={setActiveTab} />
+  }
+
   if (showWrite) {
     return (
       <BlindWriteScreen
@@ -185,7 +196,7 @@ export default function BlindHomeScreen() {
                         />
                       </div>
                       <div className={styles.cardAuthorInfo}>
-                        <span className={styles.cardNickname}>사용자 {post.user_id}</span>
+                        <span className={styles.cardNickname}>{MOCK_NICKNAMES[post.user_id] ?? `사용자 ${post.user_id}`}</span>
                         <span className={styles.cardTime}>{timeAgo(post.created_at)}</span>
                       </div>
                     </div>
