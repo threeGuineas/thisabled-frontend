@@ -39,8 +39,9 @@ const styles = {
   nextIcon: 'w-5 h-5',
 
   // 내용 작성
+  textareaWrapper: 'flex-1 flex flex-col overflow-y-auto pb-52',
   textarea: [
-    'block mt-4 px-5 py-4 bg-[#161616] rounded-2xl mx-5 min-h-[50vh]',
+    'flex-1 block mt-4 px-5 py-4 bg-[#161616] rounded-2xl mx-5 min-h-[200px]',
     'text-white resize-none overflow-hidden',
     'placeholder:text-[#8A8A8A] outline-none',
     typography.base, typography.regular,
@@ -60,7 +61,15 @@ const styles = {
     'flex items-center gap-2 bg-[#161616] rounded-2xl px-10 py-5',
     'active:opacity-70',
   ].join(' '),
+  voiceButtonRecording: [
+    'flex items-center gap-2 bg-[#161616] border-2 border-red-400 rounded-2xl px-10 py-5',
+    'active:opacity-70',
+  ].join(' '),
+  voiceButtonTranscribing: [
+    'flex items-center gap-2 bg-[#161616] rounded-2xl px-10 py-5 opacity-50',
+  ].join(' '),
   voiceIcon: 'w-5 h-5',
+  voiceIconRecording: 'w-5 h-5 animate-pulse',
   voiceText: ['text-white', typography.sm, typography.medium].join(' '),
 
   submitButtonActive: [

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import styles from './BlindWriteScreen.styles'
+import { useVoiceInput } from '../hooks/useVoiceInput'
 import backGIcon from '../assets/images/back-g.svg'
 import checkIcon from '../assets/images/check.svg'
 import checkOffIcon from '../assets/images/check-off.svg'
@@ -33,12 +34,30 @@ export default function BlindWriteScreen({ onBack }: Props) {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { voiceState, voiceError, toggleRecording, stopRecording } = useVoiceInput((text) => {
+    setContent((prev) => (prev ? `${prev} ${text}` : text))
+  })
+
+  const voiceButtonClass =
+    voiceState === 'recording' ? styles.voiceButtonRecording
+    : voiceState === 'transcribing' ? styles.voiceButtonTranscribing
+    : styles.voiceButton
+
+  const voiceIconClass =
+    voiceState === 'recording' ? styles.voiceIconRecording : styles.voiceIcon
+
+  const voiceLabel =
+    voiceState === 'recording' ? '녹음 중...'
+    : voiceState === 'transcribing' ? '인식 중...'
+    : voiceState === 'error' ? '다시 시도'
+    : '음성 입력'
 
   useEffect(() => {
     window.scrollTo(0, 0)
-  }, [step])
+    stopRecording()
+  }, [step, stopRecording])
 
   // 이전 preview URL 해제 (메모리 누수 방지)
   useEffect(() => {
@@ -49,11 +68,6 @@ export default function BlindWriteScreen({ onBack }: Props) {
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value)
-    const el = textareaRef.current
-    if (el) {
-      el.style.height = 'auto'
-      el.style.height = `${el.scrollHeight}px`
-    }
   }
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,14 +159,12 @@ export default function BlindWriteScreen({ onBack }: Props) {
         </>
       ) : (
         <>
-          <div className="pb-52">
+          <div className={styles.textareaWrapper}>
             <textarea
-              ref={textareaRef}
               className={styles.textarea}
               placeholder={'글을 작성해주세요.\n아래 마이크 버튼으로 음성 입력도 가능해요.'}
               value={content}
               onChange={handleContentChange}
-              rows={1}
               disabled={isSubmitting}
             />
 
@@ -168,6 +180,10 @@ export default function BlindWriteScreen({ onBack }: Props) {
                   ✕
                 </button>
               </div>
+            )}
+
+            {voiceError && (
+              <p className="mx-5 mt-2 text-xs text-red-400">{voiceError}</p>
             )}
 
             {submitError && (
@@ -196,9 +212,14 @@ export default function BlindWriteScreen({ onBack }: Props) {
                 <img src={imageWIcon} alt="사진" className={styles.photoIcon} />
                 <span className={styles.photoText}>사진</span>
               </button>
-              <button type="button" className={styles.voiceButton} disabled={isSubmitting}>
-                <img src={micWIcon} alt="음성 입력" className={styles.voiceIcon} />
-                <span className={styles.voiceText}>음성 입력</span>
+              <button
+                type="button"
+                onClick={toggleRecording}
+                disabled={isSubmitting || voiceState === 'transcribing'}
+                className={voiceButtonClass}
+              >
+                <img src={micWIcon} alt="음성 입력" className={voiceIconClass} />
+                <span className={styles.voiceText}>{voiceLabel}</span>
               </button>
             </div>
 

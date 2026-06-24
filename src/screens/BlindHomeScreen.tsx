@@ -4,12 +4,15 @@ import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
 import BlindCommentsScreen from './BlindCommentsScreen'
 import BlindWriteScreen from './BlindWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
+import BlindChatScreen from './BlindChatScreen'
 import { getPosts, type Post, API_BASE_URL } from '../services/posts'
+import { describeImage, speakText } from '../services/voice'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
 import heartWIcon from '../assets/images/heart-w.svg'
 import heartBIcon from '../assets/images/heart-b.svg'
 import chatWIcon from '../assets/images/chat-w.svg'
+import micWIcon from '../assets/images/mic-w.svg'
 
 const LIMIT = 20
 
@@ -54,6 +57,7 @@ export default function BlindHomeScreen() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [audioState, setAudioState] = useState<{ postId: number; status: 'loading' | 'speaking' } | null>(null)
 
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -100,12 +104,28 @@ export default function BlindHomeScreen() {
     return () => observer.disconnect()
   }, [hasMore, isLoadingMore, isLoading, offset, loadPosts])
 
+  const handleDescribeImage = async (postId: number, imageUrl: string) => {
+    if (audioState?.postId === postId) {
+      window.speechSynthesis.cancel()
+      setAudioState(null)
+      return
+    }
+    setAudioState({ postId, status: 'loading' })
+    const description = await describeImage(imageUrl)
+    setAudioState({ postId, status: 'speaking' })
+    speakText(description, () => setAudioState(null))
+  }
+
   const toggleLike = (id: number) => {
     setLikedCards((prev) => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
+  }
+
+  if (activeTab === 'chat') {
+    return <BlindChatScreen onTabChange={setActiveTab} />
   }
 
   if (activeTab === 'my') {
@@ -207,11 +227,27 @@ export default function BlindHomeScreen() {
 
                   {/* 첨부 이미지 — 있을 때만 표시 */}
                   {post.image_url && (
-                    <img
-                      src={resolveImageUrl(post.image_url)}
-                      alt="첨부 이미지"
-                      className={styles.cardImage}
-                    />
+                    <div className={styles.cardImageWrapper}>
+                      <img
+                        src={resolveImageUrl(post.image_url)}
+                        alt="첨부 이미지"
+                        className={styles.cardImage}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDescribeImage(post.id, resolveImageUrl(post.image_url!))}
+                        className={audioState?.postId === post.id ? styles.imageDescribeBtnActive : styles.imageDescribeBtn}
+                        aria-label="음성으로 듣기"
+                      >
+                        {audioState?.postId === post.id && audioState.status === 'loading' ? (
+                          <span className="w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin block" />
+                        ) : audioState?.postId === post.id && audioState.status === 'speaking' ? (
+                          <span className="w-3 h-3 rounded-full bg-[#FFD60A] animate-pulse block" />
+                        ) : (
+                          <img src={micWIcon} alt="" className={styles.imageDescribeBtnIcon} />
+                        )}
+                      </button>
+                    </div>
                   )}
 
                   {/* 카드 하단 */}
