@@ -1,58 +1,120 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './BlindHomeScreen.styles'
 import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
 import BlindCommentsScreen from './BlindCommentsScreen'
 import BlindWriteScreen from './BlindWriteScreen'
+import BlindMyScreen from './BlindMyScreen'
+import BlindChatScreen from './BlindChatScreen'
+import { getPosts, type Post, API_BASE_URL } from '../services/posts'
+import { describeImage, speakText } from '../services/voice'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
 import heartWIcon from '../assets/images/heart-w.svg'
 import heartBIcon from '../assets/images/heart-b.svg'
 import chatWIcon from '../assets/images/chat-w.svg'
+import micWIcon from '../assets/images/mic-w.svg'
 
-const filters = ['전체', '일상', '정보', '취미', '고민', '모임']
+const LIMIT = 20
 
-const POST_BODY =
-  '오늘 동네 공원을 한 바퀴 돌았어요. 벤치 옆\n라일락 향이 진해서, 한참을 앉아 있었습니다.\n봄이 왔다는 걸 코로 먼저 알았네요.'
+const MOCK_NICKNAMES: Record<number, string> = {
+  1: '달콤한하루',
+  2: '하늘산책',
+  3: '달빛여행',
+}
 
-const SAMPLE_CARDS = [
-  {
-    id: 1,
-    nickname: '하늘산책',
-    time: '8분 전',
-    tag: '#일상',
-    body: POST_BODY,
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&q=80',
-    likes: 9,
-    comments: 7,
-  },
-  {
-    id: 2,
-    nickname: '봄바람',
-    time: '23분 전',
-    tag: '#일상',
-    body: POST_BODY,
-    image: 'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=400&q=80',
-    likes: 9,
-    comments: 7,
-  },
-  {
-    id: 3,
-    nickname: '달빛여행',
-    time: '1시간 전',
-    tag: '#정보',
-    body: POST_BODY,
-    image: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&q=80',
-    likes: 9,
-    comments: 7,
-  },
+const FAKE_COUNTS = [
+  { likes: 9, comments: 7 },
+  { likes: 4, comments: 3 },
+  { likes: 15, comments: 11 },
+  { likes: 3, comments: 1 },
+  { likes: 22, comments: 8 },
 ]
 
+function resolveImageUrl(imageUrl: string): string {
+  return imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`
+}
+
+function timeAgo(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '방금 전'
+  if (mins < 60) return `${mins}분 전`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}시간 전`
+  return `${Math.floor(hours / 24)}일 전`
+}
+
 export default function BlindHomeScreen() {
-  const [activeFilter, setActiveFilter] = useState('전체')
   const [activeTab, setActiveTab] = useState<Tab>('home')
+  const [activeFilter, setActiveFilter] = useState('전체')
   const [likedCards, setLikedCards] = useState<Set<number>>(new Set())
   const [showComments, setShowComments] = useState(false)
   const [showWrite, setShowWrite] = useState(false)
+
+  const [posts, setPosts] = useState<Post[]>([])
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [audioState, setAudioState] = useState<{ postId: number; status: 'loading' | 'speaking' } | null>(null)
+
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  const loadPosts = useCallback(async (currentOffset: number, replace: boolean) => {
+    if (replace) {
+      setIsLoading(true)
+      setFetchError(null)
+    } else {
+      setIsLoadingMore(true)
+    }
+
+    try {
+      const newPosts = await getPosts(currentOffset, LIMIT)
+      setPosts(prev => replace ? newPosts : [...prev, ...newPosts])
+      setOffset(currentOffset + newPosts.length)
+      setHasMore(newPosts.length === LIMIT)
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setFetchError(e.detail ?? '피드를 불러오지 못했습니다.')
+    } finally {
+      if (replace) setIsLoading(false)
+      else setIsLoadingMore(false)
+    }
+  }, [])
+
+  // 초기 로드
+  useEffect(() => {
+    loadPosts(0, true)
+  }, [loadPosts])
+
+  // 무한 스크롤 — sentinel이 뷰포트에 들어오면 다음 페이지 로드
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !isLoadingMore && !isLoading) {
+          loadPosts(offset, false)
+        }
+      },
+      { threshold: 0.1 },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, isLoadingMore, isLoading, offset, loadPosts])
+
+  const handleDescribeImage = async (postId: number, imageUrl: string) => {
+    if (audioState?.postId === postId) {
+      window.speechSynthesis.cancel()
+      setAudioState(null)
+      return
+    }
+    setAudioState({ postId, status: 'loading' })
+    const description = await describeImage(imageUrl)
+    setAudioState({ postId, status: 'speaking' })
+    speakText(description, () => setAudioState(null))
+  }
 
   const toggleLike = (id: number) => {
     setLikedCards((prev) => {
@@ -62,8 +124,23 @@ export default function BlindHomeScreen() {
     })
   }
 
+  if (activeTab === 'chat') {
+    return <BlindChatScreen onTabChange={setActiveTab} />
+  }
+
+  if (activeTab === 'my') {
+    return <BlindMyScreen onTabChange={setActiveTab} />
+  }
+
   if (showWrite) {
-    return <BlindWriteScreen onBack={() => setShowWrite(false)} />
+    return (
+      <BlindWriteScreen
+        onBack={() => {
+          setShowWrite(false)
+          loadPosts(0, true)
+        }}
+      />
+    )
   }
 
   if (showComments) {
@@ -81,18 +158,18 @@ export default function BlindHomeScreen() {
 
       <div className={styles.section}>
         <button type="button" onClick={() => setShowWrite(true)} className={styles.writeButton}>
-          <img src={plusIcon} alt="글 쓰기 버튼" className={styles.plusIcon} />
+          <img src={plusIcon} alt="더하기 버튼" className={styles.plusIcon} />
           <span className={styles.writeText}>글 쓰기 · 음성으로 작성</span>
         </button>
       </div>
 
       <div className={styles.filterContainer}>
         <div className={styles.filterInner}>
-          {filters.map((f) => (
+          {['전체', '일상', '정보', '취미', '고민', '모임'].map((f) => (
             <button
               key={f}
-              onClick={() => setActiveFilter(f)}
               type="button"
+              onClick={() => setActiveFilter(f)}
               className={f === activeFilter ? styles.filterActive : styles.filterInactive}
             >
               {f}
@@ -101,68 +178,119 @@ export default function BlindHomeScreen() {
         </div>
       </div>
 
-      <p className={styles.newPostsBadge}>
-        새 글 <span className={styles.newPostsCount}>3</span>개
-      </p>
-
-      {/* 카드 스와이프 영역 */}
-      <div className={styles.cardScrollArea}>
-        <div className={styles.cardScrollInner}>
-          {SAMPLE_CARDS.map((card) => (
-            <div key={card.id} className={styles.card}>
-              {/* 작성자 정보 */}
-              <div className={styles.cardHeader}>
-                <div className={styles.cardAuthorRow}>
-                  <div className={styles.cardAvatarCol}>
-                    <img
-                      src={`https://i.pravatar.cc/80?img=${card.id + 10}`}
-                      alt={card.nickname}
-                      className={styles.cardAvatar}
-                    />
-                    <span className={styles.cardTag}>{card.tag}</span>
+      {/* 피드 */}
+      {isLoading ? (
+        <div className="flex flex-1 items-center justify-center py-20">
+          <span className="text-white/50 text-sm">피드를 불러오는 중...</span>
+        </div>
+      ) : fetchError ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-20">
+          <span className="text-white/50 text-sm">{fetchError}</span>
+          <button
+            type="button"
+            onClick={() => loadPosts(0, true)}
+            className="rounded-xl bg-[#1F1F1F] px-5 py-3 text-white text-sm"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center py-20">
+          <span className="text-white/50 text-sm">아직 게시글이 없어요.</span>
+        </div>
+      ) : (
+        <div className={styles.cardScrollArea}>
+          <div className={styles.cardScrollInner}>
+            {posts.map((post) => {
+              const counts = FAKE_COUNTS[post.id % FAKE_COUNTS.length]
+              return (
+                <div key={post.id} className={styles.card}>
+                  {/* 작성자 정보 */}
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardAuthorRow}>
+                      <div className={styles.cardAvatarCol}>
+                        <img
+                          src={`https://i.pravatar.cc/80?img=${post.user_id % 70 + 1}`}
+                          alt={`사용자 ${post.user_id}`}
+                          className={styles.cardAvatar}
+                        />
+                      </div>
+                      <div className={styles.cardAuthorInfo}>
+                        <span className={styles.cardNickname}>{MOCK_NICKNAMES[post.user_id] ?? `사용자 ${post.user_id}`}</span>
+                        <span className={styles.cardTime}>{timeAgo(post.created_at)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className={styles.cardAuthorInfo}>
-                    <span className={styles.cardNickname}>{card.nickname}</span>
-                    <span className={styles.cardTime}>{card.time}</span>
+
+                  {/* 본문 */}
+                  <p className={styles.cardBody}>{post.content}</p>
+
+                  {/* 첨부 이미지 — 있을 때만 표시 */}
+                  {post.image_url && (
+                    <div className={styles.cardImageWrapper}>
+                      <img
+                        src={resolveImageUrl(post.image_url)}
+                        alt="첨부 이미지"
+                        className={styles.cardImage}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDescribeImage(post.id, resolveImageUrl(post.image_url!))}
+                        className={audioState?.postId === post.id ? styles.imageDescribeBtnActive : styles.imageDescribeBtn}
+                        aria-label="음성으로 듣기"
+                      >
+                        {audioState?.postId === post.id && audioState.status === 'loading' ? (
+                          <span className="w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin block" />
+                        ) : audioState?.postId === post.id && audioState.status === 'speaking' ? (
+                          <span className="w-3 h-3 rounded-full bg-[#FFD60A] animate-pulse block" />
+                        ) : (
+                          <img src={micWIcon} alt="" className={styles.imageDescribeBtnIcon} />
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 카드 하단 */}
+                  <div className={styles.cardFooter}>
+                    <button
+                      type="button"
+                      onClick={() => toggleLike(post.id)}
+                      className={likedCards.has(post.id) ? styles.cardFooterLeftActive : styles.cardFooterLeft}
+                    >
+                      <img
+                        src={likedCards.has(post.id) ? heartBIcon : heartWIcon}
+                        alt="좋아요"
+                        className={styles.cardFooterIcon}
+                      />
+                      <span className={likedCards.has(post.id) ? styles.cardFooterTextActive : styles.cardFooterText}>
+                        {likedCards.has(post.id) ? counts.likes + 1 : counts.likes}개
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowComments(true)}
+                      className={styles.cardFooterRight}
+                    >
+                      <img src={chatWIcon} alt="댓글" className={styles.cardFooterIcon} />
+                      <span className={styles.cardFooterText}>{counts.comments}개 | 댓글 보기</span>
+                    </button>
                   </div>
                 </div>
-              </div>
+              )
+            })}
 
-              {/* 본문 */}
-              <p className={styles.cardBody}>{card.body}</p>
-
-              {/* 첨부 이미지 */}
-              <img src={card.image} alt="첨부 이미지" className={styles.cardImage} />
-
-              {/* 카드 하단 */}
-              <div className={styles.cardFooter}>
-                <button
-                  type="button"
-                  onClick={() => toggleLike(card.id)}
-                  className={likedCards.has(card.id) ? styles.cardFooterLeftActive : styles.cardFooterLeft}
-                >
-                  <img
-                    src={likedCards.has(card.id) ? heartBIcon : heartWIcon}
-                    alt="좋아요 버튼"
-                    className={styles.cardFooterIcon}
-                  />
-                  <span className={likedCards.has(card.id) ? styles.cardFooterTextActive : styles.cardFooterText}>
-                    {likedCards.has(card.id) ? card.likes + 1 : card.likes}개
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowComments(true)}
-                  className={styles.cardFooterRight}
-                >
-                  <img src={chatWIcon} alt="댓글 버튼" className={styles.cardFooterIcon} />
-                  <span className={styles.cardFooterText}>{card.comments}개 | 댓글 보기</span>
-                </button>
-              </div>
+            {/* 무한 스크롤 sentinel */}
+            <div ref={sentinelRef} className="py-2">
+              {isLoadingMore && (
+                <p className="text-center text-white/40 text-sm py-4">불러오는 중...</p>
+              )}
+              {!hasMore && posts.length > 0 && (
+                <p className="text-center text-white/30 text-sm py-4">마지막 게시글이에요.</p>
+              )}
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <BlindBottomNav active={activeTab} onChange={setActiveTab} />
     </div>

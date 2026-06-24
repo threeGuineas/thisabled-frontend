@@ -39,7 +39,7 @@ const styles = {
 
   // 카드 스와이프 영역
   cardScrollArea: 'mt-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-4',
-  cardScrollInner: 'flex gap-4',
+  cardScrollInner: 'flex gap-4 items-start',
 
   // 글 카드
   card: [
@@ -61,7 +61,19 @@ const styles = {
   cardBody: ['text-white leading-relaxed', typography.sm, typography.regular].join(' '),
 
   // 첨부 이미지
+  cardImageWrapper: 'relative',
   cardImage: 'w-full h-36 object-cover rounded-xl',
+  imageDescribeBtn: [
+    'absolute bottom-2 right-2 w-9 h-9 rounded-full',
+    'bg-[#FFD60A] flex items-center justify-center shadow-lg',
+    'active:opacity-80 transition-opacity',
+  ].join(' '),
+  imageDescribeBtnActive: [
+    'absolute bottom-2 right-2 w-9 h-9 rounded-full',
+    'bg-white flex items-center justify-center shadow-lg',
+    'active:opacity-80 transition-opacity',
+  ].join(' '),
+  imageDescribeBtnIcon: 'w-4 h-4',
 
   // 카드 하단
   cardFooter: 'flex items-center justify-between mt-1',

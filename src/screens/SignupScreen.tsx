@@ -4,9 +4,12 @@ import backIcon from '../assets/images/back.svg'
 import eyeOpen from '../assets/images/eye-open.svg'
 import eyeClosed from '../assets/images/eye-closed.svg'
 import checkIcon from '../assets/images/check.svg'
+import { register, tokenStorage, type DisabilityType } from '../services/auth'
 
 interface Props {
+  disabilityType: DisabilityType
   onBack: () => void
+  onSuccess: (disabilityType: DisabilityType) => void
 }
 
 interface FormErrors {
@@ -15,7 +18,7 @@ interface FormErrors {
   passwordConfirm: string
 }
 
-export default function SignupScreen({ onBack }: Props) {
+export default function SignupScreen({ disabilityType, onBack, onSuccess }: Props) {
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -23,6 +26,8 @@ export default function SignupScreen({ onBack }: Props) {
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [agreed, setAgreed] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({ nickname: '', password: '', passwordConfirm: '' })
+  const [apiError, setApiError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const isButtonActive = nickname.trim() && password && passwordConfirm && agreed
 
@@ -30,7 +35,7 @@ export default function SignupScreen({ onBack }: Props) {
     setErrors((prev) => ({ ...prev, [field]: '' }))
   }
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     const newErrors: FormErrors = { nickname: '', password: '', passwordConfirm: '' }
 
     if (nickname.trim().length < 2) {
@@ -51,12 +56,28 @@ export default function SignupScreen({ onBack }: Props) {
       return
     }
 
-    // TODO: 회원가입 API 연동
+    setLoading(true)
+    setApiError('')
+    try {
+      const { access_token } = await register(nickname.trim(), password, disabilityType)
+      tokenStorage.set(access_token)
+      onSuccess(disabilityType)
+    } catch (err: unknown) {
+      console.error('[signup error]', err)
+      const apiErr = err as { status?: number }
+      if (apiErr?.status === 409) {
+        setErrors((prev) => ({ ...prev, nickname: '이미 사용 중인 닉네임입니다.' }))
+      } else {
+        setApiError('서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className={styles.container}>
-      <button className={styles.backButton} onClick={onBack}>
+      <button type="button" className={styles.backButton} onClick={onBack}>
         <img src={backIcon} alt="뒤로가기" className={styles.backIcon} />
       </button>
 
@@ -143,15 +164,18 @@ export default function SignupScreen({ onBack }: Props) {
       </div>
 
       <button
-        disabled={!isButtonActive}
+        type="button"
+        disabled={!isButtonActive || loading}
         onClick={handleSignup}
         className={[
           styles.signupButtonBase,
-          isButtonActive ? styles.signupButtonActive : styles.signupButtonDisabled,
+          isButtonActive && !loading ? styles.signupButtonActive : styles.signupButtonDisabled,
         ].join(' ')}
       >
-        가입하기
+        {loading ? '가입 중...' : '가입하기'}
       </button>
+
+      {apiError && <p className={styles.errorText}>{apiError}</p>}
     </div>
   )
 }

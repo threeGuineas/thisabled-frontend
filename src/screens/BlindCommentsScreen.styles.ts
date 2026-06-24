@@ -55,10 +55,18 @@ const styles = {
 
   sheetFooter: 'flex items-center justify-between mt-2',
   voiceButton: [
-    'flex items-center gap-2 border border-white/20 rounded-full px-10 py-5',
+    'flex items-center gap-2 border border-white/20 rounded-full px-8 py-5',
     'active:opacity-70',
   ].join(' '),
+  voiceButtonRecording: [
+    'flex items-center gap-2 border-2 border-red-400 rounded-full px-8 py-5',
+    'active:opacity-70',
+  ].join(' '),
+  voiceButtonTranscribing: [
+    'flex items-center gap-2 border border-white/20 rounded-full px-8 py-5 opacity-50',
+  ].join(' '),
   voiceIcon: 'w-5 h-5',
+  voiceIconRecording: 'w-5 h-5 animate-pulse',
   voiceText: ['text-white', typography.sm, typography.medium].join(' '),
 
   submitButtonInactive: [

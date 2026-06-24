@@ -113,6 +113,38 @@ const styles = {
     colors.text.gray02,
   ].join(' '),
 
+  disabilityGrid: [
+    'grid grid-cols-2 gap-2',
+  ].join(' '),
+
+  disabilityCard: [
+    'flex flex-col items-center gap-2',
+    'rounded-2xl',
+    `border-2 ${colors.border.gray03} ${colors.bg.gray04}`,
+    'py-4 cursor-pointer select-none transition-colors',
+  ].join(' '),
+
+  disabilityCardSelected: [
+    'flex flex-col items-center gap-2',
+    'rounded-2xl',
+    'border-2 border-[#FFD60A] bg-[#FFFAE1]',
+    'py-4 cursor-pointer select-none transition-colors',
+  ].join(' '),
+
+  disabilityCardIcon: [
+    'w-6 h-6',
+  ].join(' '),
+
+  disabilityCardLabel: [
+    typography.xs, typography.medium,
+    colors.text.gray01,
+  ].join(' '),
+
+  disabilityCardLabelSelected: [
+    typography.xs, typography.semibold,
+    colors.text.black,
+  ].join(' '),
+
   signupButtonBase: [
     'mt-8 w-full rounded-2xl py-4',
     typography.sm, typography.bold,

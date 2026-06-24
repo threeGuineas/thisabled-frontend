@@ -2,6 +2,7 @@ import { useState } from 'react'
 import styles from './LoginScreen.styles'
 import eyeOpen from '../assets/images/eye-open.svg'
 import eyeClosed from '../assets/images/eye-closed.svg'
+import { login, getMe, tokenStorage, type DisabilityType } from '../services/auth'
 
 interface FormErrors {
   nickname: string
@@ -10,7 +11,7 @@ interface FormErrors {
 }
 
 interface Props {
-  onLogin: () => void
+  onLogin: (disabilityType: DisabilityType) => void
   onSignup: () => void
 }
 
@@ -19,12 +20,13 @@ export default function LoginScreen({ onLogin, onSignup }: Props) {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({ nickname: '', password: '', login: '' })
+  const [loading, setLoading] = useState(false)
 
   const clearError = (field: keyof FormErrors) => {
     setErrors((prev) => ({ ...prev, [field]: '' }))
   }
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const newErrors: FormErrors = { nickname: '', password: '', login: '' }
 
     if (!nickname.trim()) {
@@ -39,8 +41,22 @@ export default function LoginScreen({ onLogin, onSignup }: Props) {
       return
     }
 
-    // TODO: 실제 로그인 API 연동 시 교체
-    onLogin()
+    setLoading(true)
+    try {
+      const { access_token } = await login(nickname.trim(), password)
+      tokenStorage.set(access_token)
+      const me = await getMe(access_token)
+      onLogin(me.disability_type)
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number }
+      if (apiErr?.status === 401) {
+        setErrors((prev) => ({ ...prev, login: '닉네임 또는 비밀번호가 올바르지 않습니다.' }))
+      } else {
+        setErrors((prev) => ({ ...prev, login: '서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.' }))
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -99,14 +115,15 @@ export default function LoginScreen({ onLogin, onSignup }: Props) {
       </div>
 
       <button
-        disabled={!password}
+        type="button"
+        disabled={!password || loading}
         onClick={handleLogin}
         className={[
           styles.loginButtonBase,
-          password ? styles.loginButtonActive : styles.loginButtonDisabled,
+          password && !loading ? styles.loginButtonActive : styles.loginButtonDisabled,
         ].join(' ')}
       >
-        로그인
+        {loading ? '로그인 중...' : '로그인'}
       </button>
 
       {errors.login && <p className={styles.loginError}>{errors.login}</p>}
@@ -117,7 +134,7 @@ export default function LoginScreen({ onLogin, onSignup }: Props) {
           <p className={styles.signupGuide}>처음이신가요?</p>
           <hr className={styles.signupDividerLine} />
         </div>
-        <button className={styles.signupButton} onClick={onSignup}>회원가입</button>
+        <button type="button" className={styles.signupButton} onClick={onSignup}>회원가입</button>
       </div>
     </div>
   )
