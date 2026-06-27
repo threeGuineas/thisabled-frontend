@@ -30,7 +30,7 @@ export default function TestScreen({ onGoLogin, onGoSignup, onGoOnboarding, onGo
         { label: '시각장애 홈', sub: 'BlindHomeScreen', onClick: () => onGoHome('visual'), color: 'black' },
         { label: '청각장애 홈', sub: '미구현', onClick: () => onGoHome('hearing'), color: 'gray' },
         { label: '발달장애 홈', sub: '미구현', onClick: () => onGoHome('developmental'), color: 'gray' },
-        { label: '기본 홈', sub: '미구현', onClick: () => onGoHome('none'), color: 'gray' },
+        { label: '기본 홈', sub: '미구현', onClick: () => onGoHome('default'), color: 'gray' },
       ],
     },
   ]
@@ -95,7 +95,7 @@ export default function TestScreen({ onGoLogin, onGoSignup, onGoOnboarding, onGo
               ['visual', '로그인 → 시각장애 홈'],
               ['hearing', '로그인 → 청각장애 홈'],
               ['developmental', '로그인 → 발달장애 홈'],
-              ['none', '로그인 → 기본 홈'],
+              ['default', '로그인 → 기본 홈'],
               ['error', '로그인 → 401 오류 발생'],
               ['taken', '회원가입 → 409 닉네임 중복'],
             ].map(([nick, desc]) => (

@@ -6,6 +6,7 @@ import BlindWriteScreen from './BlindWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
 import { getPosts, type Post, API_BASE_URL } from '../services/posts'
+import { getMe, type MeResponse } from '../services/auth'
 import { describeImage, speakText } from '../services/voice'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
@@ -16,19 +17,22 @@ import micWIcon from '../assets/images/mic-w.svg'
 
 const LIMIT = 20
 
-const MOCK_NICKNAMES: Record<number, string> = {
-  1: '달콤한하루',
-  2: '하늘산책',
-  3: '달빛여행',
-}
+const MOCK_NICKNAMES = ['달콤한하루', '하늘산책', '달빛여행', '봄바람', '초록잎']
 
 const FAKE_COUNTS = [
-  { likes: 9, comments: 7 },
-  { likes: 4, comments: 3 },
-  { likes: 15, comments: 11 },
-  { likes: 3, comments: 1 },
-  { likes: 22, comments: 8 },
+  { likes: 9, comments: 3 },
+  { likes: 0, comments: 0 },
+  { likes: 0, comments: 0 },
+  { likes: 0, comments: 0 },
+  { likes: 0, comments: 0 },
 ]
+
+// UUID 문자열을 안정적인 정수 인덱스로 변환
+function hashId(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return h
+}
 
 function resolveImageUrl(imageUrl: string): string {
   return imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`
@@ -47,9 +51,12 @@ function timeAgo(isoString: string): string {
 export default function BlindHomeScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [activeFilter, setActiveFilter] = useState('전체')
-  const [likedCards, setLikedCards] = useState<Set<number>>(new Set())
+  const [likedCards, setLikedCards] = useState<Set<string>>(new Set())
   const [showComments, setShowComments] = useState(false)
   const [showWrite, setShowWrite] = useState(false)
+
+  const [me, setMe] = useState<MeResponse | null>(null)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   const [posts, setPosts] = useState<Post[]>([])
   const [offset, setOffset] = useState(0)
@@ -57,7 +64,7 @@ export default function BlindHomeScreen() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [audioState, setAudioState] = useState<{ postId: number; status: 'loading' | 'speaking' } | null>(null)
+  const [audioState, setAudioState] = useState<{ postId: string; status: 'loading' | 'speaking' } | null>(null)
 
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -83,6 +90,11 @@ export default function BlindHomeScreen() {
     }
   }, [])
 
+  // 현재 로그인 유저 정보 로드 (본인 게시물 닉네임 표시용)
+  useEffect(() => {
+    getMe().then(setMe).catch(() => {})
+  }, [])
+
   // 초기 로드
   useEffect(() => {
     loadPosts(0, true)
@@ -104,7 +116,7 @@ export default function BlindHomeScreen() {
     return () => observer.disconnect()
   }, [hasMore, isLoadingMore, isLoading, offset, loadPosts])
 
-  const handleDescribeImage = async (postId: number, imageUrl: string) => {
+  const handleDescribeImage = async (postId: string, imageUrl: string) => {
     if (audioState?.postId === postId) {
       window.speechSynthesis.cancel()
       setAudioState(null)
@@ -116,7 +128,7 @@ export default function BlindHomeScreen() {
     speakText(description, () => setAudioState(null))
   }
 
-  const toggleLike = (id: number) => {
+  const toggleLike = (id: string) => {
     setLikedCards((prev) => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
@@ -202,21 +214,31 @@ export default function BlindHomeScreen() {
         <div className={styles.cardScrollArea}>
           <div className={styles.cardScrollInner}>
             {posts.map((post) => {
-              const counts = FAKE_COUNTS[post.id % FAKE_COUNTS.length]
+              const h = hashId(post.id)
+              const counts = FAKE_COUNTS[h % FAKE_COUNTS.length]
+              const avatarIdx = hashId(String(post.user_id)) % 70 + 1
+              const isMyPost = me && String(post.user_id) === String(me.id)
+              const nickname = isMyPost ? me.nickname : MOCK_NICKNAMES[hashId(String(post.user_id)) % MOCK_NICKNAMES.length]
               return (
                 <div key={post.id} className={styles.card}>
                   {/* 작성자 정보 */}
                   <div className={styles.cardHeader}>
                     <div className={styles.cardAuthorRow}>
                       <div className={styles.cardAvatarCol}>
-                        <img
-                          src={`https://i.pravatar.cc/80?img=${post.user_id % 70 + 1}`}
-                          alt={`사용자 ${post.user_id}`}
-                          className={styles.cardAvatar}
-                        />
+                        {isMyPost ? (
+                          <div className={`${styles.cardAvatar} bg-[#FFD60A] flex items-center justify-center text-black font-bold text-base`}>
+                            {me!.nickname[0].toUpperCase()}
+                          </div>
+                        ) : (
+                          <img
+                            src={`https://i.pravatar.cc/80?img=${avatarIdx}`}
+                            alt={`사용자 ${post.user_id}`}
+                            className={styles.cardAvatar}
+                          />
+                        )}
                       </div>
                       <div className={styles.cardAuthorInfo}>
-                        <span className={styles.cardNickname}>{MOCK_NICKNAMES[post.user_id] ?? `사용자 ${post.user_id}`}</span>
+                        <span className={styles.cardNickname}>{nickname}</span>
                         <span className={styles.cardTime}>{timeAgo(post.created_at)}</span>
                       </div>
                     </div>
@@ -231,7 +253,8 @@ export default function BlindHomeScreen() {
                       <img
                         src={resolveImageUrl(post.image_url)}
                         alt="첨부 이미지"
-                        className={styles.cardImage}
+                        className={`${styles.cardImage} cursor-pointer`}
+                        onClick={() => setLightboxUrl(resolveImageUrl(post.image_url!))}
                       />
                       <button
                         type="button"
@@ -293,6 +316,29 @@ export default function BlindHomeScreen() {
       )}
 
       <BlindBottomNav active={activeTab} onChange={setActiveTab} />
+
+      {/* 이미지 라이트박스 */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            type="button"
+            aria-label="닫기"
+            className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center text-white text-2xl rounded-full bg-white/10"
+            onClick={() => setLightboxUrl(null)}
+          >
+            ✕
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="확대 이미지"
+            className="max-w-full max-h-full object-contain p-4"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -12,10 +12,11 @@ interface FormErrors {
 
 interface Props {
   onLogin: (disabilityType: DisabilityType) => void
+  onNeedsOnboarding: () => void
   onSignup: () => void
 }
 
-export default function LoginScreen({ onLogin, onSignup }: Props) {
+export default function LoginScreen({ onLogin, onNeedsOnboarding, onSignup }: Props) {
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -43,10 +44,16 @@ export default function LoginScreen({ onLogin, onSignup }: Props) {
 
     setLoading(true)
     try {
-      const { access_token } = await login(nickname.trim(), password)
+      const { access_token, needs_onboarding } = await login(nickname.trim(), password)
       tokenStorage.set(access_token)
-      const me = await getMe(access_token)
-      onLogin(me.disability_type)
+
+      if (needs_onboarding) {
+        onNeedsOnboarding()
+        return
+      }
+
+      const me = await getMe()
+      onLogin(me.disability_mode ?? 'default')
     } catch (err: unknown) {
       const apiErr = err as { status?: number }
       if (apiErr?.status === 401) {

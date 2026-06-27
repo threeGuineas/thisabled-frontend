@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { transcribeAudio } from '../services/voice'
 
 export type VoiceState = 'idle' | 'recording' | 'transcribing' | 'error'
-
-type SpeechRecognitionCtor = new () => SpeechRecognition
-
-function getSpeechRecognition(): SpeechRecognitionCtor | null {
-  const w = window as unknown as Record<string, unknown>
-  return (w['SpeechRecognition'] ?? w['webkitSpeechRecognition'] ?? null) as SpeechRecognitionCtor | null
-}
 
 function speak(text: string): Promise<void> {
   return new Promise((resolve) => {
@@ -19,7 +13,8 @@ function speak(text: string): Promise<void> {
     const timer = setTimeout(resolve, 3000)
     utterance.onend = () => { clearTimeout(timer); resolve() }
     utterance.onerror = () => { clearTimeout(timer); resolve() }
-    speechSynthesis.speak(utterance)
+    // cancel() 직후 speak()하면 Chrome에서 첫 음절이 잘리는 버그 대비
+    setTimeout(() => speechSynthesis.speak(utterance), 50)
   })
 }
 
@@ -31,72 +26,93 @@ export function useVoiceInput(onResult: (text: string) => void) {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle')
   const [voiceError, setVoiceError] = useState<string | null>(null)
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
   const onResultRef = useRef(onResult)
   useEffect(() => { onResultRef.current = onResult }, [onResult])
 
   useEffect(() => () => {
-    recognitionRef.current?.abort()
+    recorderRef.current?.stop()
+    streamRef.current?.getTracks().forEach(t => t.stop())
     speechSynthesis.cancel()
   }, [])
 
   const stopRecording = useCallback(() => {
-    recognitionRef.current?.stop()
-    recognitionRef.current = null
+    recorderRef.current?.stop()
   }, [])
 
   const startRecording = useCallback(async () => {
     setVoiceError(null)
 
-    const SpeechRecognitionClass = getSpeechRecognition()
-    if (!SpeechRecognitionClass) {
-      setVoiceError('이 브라우저는 음성 인식을 지원하지 않아요. Chrome을 사용해주세요.')
+    if (!navigator.mediaDevices?.getUserMedia) {
+      const msg = '마이크를 사용하려면 HTTPS 환경이 필요해요.'
+      setVoiceError(msg)
       setVoiceState('error')
-      speak('이 브라우저는 음성 인식을 지원하지 않아요.')
+      speak('보안 연결이 필요합니다.')
       return
     }
 
+    let stream: MediaStream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch (e) {
+      const isDenied = e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError')
+      const msg = isDenied
+        ? '마이크 권한이 거부됐어요. 브라우저 자물쇠 아이콘에서 허용해주세요.'
+        : '마이크를 사용할 수 없어요. 연결된 마이크를 확인해주세요.'
+      setVoiceError(msg)
+      setVoiceState('error')
+      speak(isDenied ? '마이크 권한이 필요합니다.' : '마이크를 사용할 수 없습니다.')
+      return
+    }
+
+    streamRef.current = stream
+    chunksRef.current = []
     vibrate(200)
     setVoiceState('recording')
 
-    // TTS가 끝나거나 3초 타임아웃 후 인식 시작
     await speak('내용을 말해주세요.')
 
-    const recognition = new SpeechRecognitionClass()
-    recognition.lang = 'ko-KR'
-    recognition.continuous = true
-    recognition.interimResults = false
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+    const recorder = new MediaRecorder(stream, { mimeType })
+    recorderRef.current = recorder
 
-    recognition.onresult = (e: SpeechRecognitionEvent) => {
-      let transcript = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) transcript += e.results[i][0].transcript
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data)
+    }
+
+    recorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop())
+      const blob = new Blob(chunksRef.current, { type: mimeType })
+      chunksRef.current = []
+
+      setVoiceState('transcribing')
+      try {
+        const text = await transcribeAudio(blob)
+        if (text) {
+          onResultRef.current(text)
+          setVoiceState('idle')
+        } else {
+          setVoiceError('음성이 감지되지 않았어요. 다시 시도해주세요.')
+          setVoiceState('error')
+          speak('음성을 인식하지 못했습니다. 다시 시도해 주세요.')
+        }
+      } catch {
+        setVoiceError('음성 인식에 실패했어요. 다시 시도해주세요.')
+        setVoiceState('error')
+        speak('음성 인식에 실패했습니다. 다시 시도해 주세요.')
       }
-      if (transcript) onResultRef.current(transcript)
     }
 
-    recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
-      const msg = e.error === 'not-allowed'
-        ? '마이크 권한이 거부됐어요. 브라우저 자물쇠 아이콘에서 허용해주세요.'
-        : '음성이 감지되지 않았어요. 다시 시도해주세요.'
-      setVoiceError(msg)
-      setVoiceState('error')
-      speak('음성을 인식하지 못했습니다. 다시 시도해 주세요.')
-    }
-
-    recognition.onend = () => {
-      setVoiceState(prev => prev === 'recording' ? 'idle' : prev)
-    }
-
-    recognitionRef.current = recognition
-    recognition.start()
+    recorder.start()
   }, [])
 
   const toggleRecording = useCallback(() => {
     if (voiceState === 'recording') {
       stopRecording()
       vibrate([200, 100, 200])
-      speak('입력이 완료되었습니다.')
+      speak('잠시만 기다려주세요.')
     } else if (voiceState === 'idle' || voiceState === 'error') {
       startRecording()
     }

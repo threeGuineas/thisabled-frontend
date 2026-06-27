@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './posts'
-import { tokenStorage, IS_MOCK } from './auth'
+import { authedRequest, IS_MOCK } from './auth'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -17,17 +17,11 @@ export async function describeImage(imageUrl: string): Promise<string> {
     return MOCK_DESCRIPTIONS[Math.abs(imageUrl.length) % MOCK_DESCRIPTIONS.length]
   }
   try {
-    const token = tokenStorage.get()
-    const res = await fetch(`${API_BASE_URL}/api/v1/describe-image`, {
+    const data = await authedRequest<{ description: string }>(`${API_BASE_URL}/api/v1/vision/describe`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_url: imageUrl }),
     })
-    if (!res.ok) throw new Error()
-    const data = await res.json() as { description: string }
     return data.description
   } catch {
     return '이미지가 첨부된 게시글입니다.'
@@ -58,18 +52,15 @@ export function speakText(text: string, onEnd: () => void): void {
 }
 
 export async function transcribeAudio(blob: Blob): Promise<string> {
+  if (IS_MOCK) {
+    await sleep(1000)
+    return '음성 인식 테스트 텍스트입니다.'
+  }
   const formData = new FormData()
   formData.append('file', blob, 'voice.webm')
-  const token = tokenStorage.get()
-  const res = await fetch(`${API_BASE_URL}/api/v1/transcribe`, {
+  const data = await authedRequest<{ text: string; duration_ms: number }>(`${API_BASE_URL}/api/v1/stt/transcribe`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw { status: res.status, detail: body.detail ?? '음성 인식에 실패했습니다.' }
-  }
-  const data = await res.json() as { text: string }
   return data.text
 }
