@@ -1,8 +1,8 @@
-import { tokenStorage, IS_MOCK } from './auth'
+import { authedRequest, IS_MOCK } from './auth'
 
 export interface Post {
-  id: number
-  user_id: number
+  id: string
+  user_id: string
   content: string
   image_url: string | null
   created_at: string
@@ -10,8 +10,6 @@ export interface Post {
 
 export const API_BASE_URL = ''
 
-
-const BASE_URL = API_BASE_URL
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 const MOCK_CONTENTS = [
@@ -36,7 +34,7 @@ const mockPosts = {
   },
   async createPost(content: string, image_url: string | null): Promise<Post> {
     await sleep(600)
-    return { id: Date.now(), user_id: 1, content, image_url, created_at: new Date().toISOString() }
+    return { id: crypto.randomUUID(), user_id: 'mock-uuid', content, image_url, created_at: new Date().toISOString() }
   },
   async getPosts(offset: number, limit: number): Promise<Post[]> {
     await sleep(600)
@@ -44,8 +42,8 @@ const mockPosts = {
     return Array.from({ length: Math.min(limit, 5) }, (_, i) => {
       const idx = offset + i
       return {
-        id: idx + 1,
-        user_id: (i % 3) + 1,
+        id: crypto.randomUUID(),
+        user_id: `mock-uuid-${(i % 3) + 1}`,
         content: MOCK_CONTENTS[idx % MOCK_CONTENTS.length],
         image_url: idx % 3 !== 2 ? MOCK_IMAGES[idx % MOCK_IMAGES.length] : null,
         created_at: new Date(Date.now() - idx * 3600000).toISOString(),
@@ -54,30 +52,17 @@ const mockPosts = {
   },
 }
 
-async function authedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = tokenStorage.get()
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${token}`, ...init.headers },
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw { status: res.status, detail: body.detail ?? '오류가 발생했습니다.' }
-  }
-  return res.json() as Promise<T>
-}
-
 export async function uploadImage(file: File): Promise<{ url: string }> {
   if (IS_MOCK) return mockPosts.upload(file)
   const formData = new FormData()
   formData.append('file', file)
-  // Content-Type을 직접 지정하지 않음 — 브라우저가 multipart/form-data로 자동 설정
-  return authedFetch<{ url: string }>('/api/v1/upload', { method: 'POST', body: formData })
+  // Content-Type은 FormData 사용 시 직접 설정하지 않음 — 브라우저가 multipart/form-data로 자동 설정
+  return authedRequest<{ url: string }>('/api/v1/upload', { method: 'POST', body: formData })
 }
 
 export async function createPost(content: string, imageUrl: string | null): Promise<Post> {
   if (IS_MOCK) return mockPosts.createPost(content, imageUrl)
-  return authedFetch<Post>('/api/v1/posts', {
+  return authedRequest<Post>('/api/v1/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content, image_url: imageUrl }),
@@ -87,7 +72,7 @@ export async function createPost(content: string, imageUrl: string | null): Prom
 export async function getPosts(offset = 0, limit = 20): Promise<Post[]> {
   if (IS_MOCK) return mockPosts.getPosts(offset, limit)
   const params = new URLSearchParams({ offset: String(offset), limit: String(limit) })
-  const res = await fetch(`${BASE_URL}/api/v1/posts?${params}`)
+  const res = await fetch(`${API_BASE_URL}/api/v1/posts?${params}`)
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw { status: res.status, detail: body.detail ?? '피드를 불러오지 못했습니다.' }

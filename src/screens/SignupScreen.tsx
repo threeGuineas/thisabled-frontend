@@ -5,6 +5,7 @@ import eyeOpen from '../assets/images/eye-open.svg'
 import eyeClosed from '../assets/images/eye-closed.svg'
 import checkIcon from '../assets/images/check.svg'
 import { register, tokenStorage, type DisabilityType } from '../services/auth'
+import { setMode } from '../services/users'
 
 interface Props {
   disabilityType: DisabilityType
@@ -28,6 +29,8 @@ export default function SignupScreen({ disabilityType, onBack, onSuccess }: Prop
   const [errors, setErrors] = useState<FormErrors>({ nickname: '', password: '', passwordConfirm: '' })
   const [apiError, setApiError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [recoveryCode, setRecoveryCode] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const isButtonActive = nickname.trim() && password && passwordConfirm && agreed
 
@@ -59,9 +62,10 @@ export default function SignupScreen({ disabilityType, onBack, onSuccess }: Prop
     setLoading(true)
     setApiError('')
     try {
-      const { access_token } = await register(nickname.trim(), password, disabilityType)
+      const { access_token, recovery_code } = await register(nickname.trim(), password)
       tokenStorage.set(access_token)
-      onSuccess(disabilityType)
+      await setMode(disabilityType)
+      setRecoveryCode(recovery_code)
     } catch (err: unknown) {
       console.error('[signup error]', err)
       const apiErr = err as { status?: number }
@@ -73,6 +77,47 @@ export default function SignupScreen({ disabilityType, onBack, onSuccess }: Prop
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCopy = async () => {
+    if (!recoveryCode) return
+    await navigator.clipboard.writeText(recoveryCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // 복구 코드 안내 화면
+  if (recoveryCode) {
+    return (
+      <div className={styles.container}>
+        <h1 className={styles.title}>복구 코드를 저장해주세요</h1>
+
+        <div className="mx-6 mt-8 rounded-2xl bg-amber-50 border border-amber-200 p-6 flex flex-col gap-4">
+          <p className="text-sm text-amber-800 leading-relaxed">
+            비밀번호를 잊었을 때 사용하는 코드예요.{'\n'}
+            <strong>이 화면을 벗어나면 다시 볼 수 없습니다.</strong>
+          </p>
+          <div className="rounded-xl bg-white border border-amber-300 px-4 py-3 text-center">
+            <span className="font-mono text-xl font-bold tracking-widest text-gray-800">{recoveryCode}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="rounded-xl bg-amber-400 py-2.5 text-sm font-semibold text-white active:bg-amber-500"
+          >
+            {copied ? '복사 완료!' : '클립보드에 복사'}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onSuccess(disabilityType)}
+          className="absolute bottom-10 left-6 right-6 rounded-2xl bg-gray-900 py-4 text-base font-bold text-white"
+        >
+          저장했어요, 시작하기
+        </button>
+      </div>
+    )
   }
 
   return (

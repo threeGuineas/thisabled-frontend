@@ -1,18 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styles from './BlindMyScreen.styles'
 import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
 import modeIcon from '../assets/images/mode.svg'
 import checkYIcon from '../assets/images/check-y.svg'
 import alarmIcon from '../assets/images/alarm.svg'
 import mypageWIcon from '../assets/images/mypage-w.svg'
-
-const MOCK_USER = {
-  nickname: '달콤한하루',
-  avatar: 'https://i.pravatar.cc/80?img=5',
-  postCount: 1,
-  commentCount: 3,
-  likeCount: 5,
-}
+import { getMe, type MeResponse } from '../services/auth'
 
 const MODES = [
   { id: 'default',       title: '기본화면', desc: '모든 기능을 기본 UI로' },
@@ -31,6 +24,11 @@ export default function BlindMyScreen({ onTabChange }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('my')
   const [selectedMode, setSelectedMode] = useState<ModeId>('visual')
   const [pendingMode, setPendingMode] = useState<ModeId | null>(null)
+  const [me, setMe] = useState<MeResponse | null>(null)
+
+  useEffect(() => {
+    getMe().then(setMe).catch(() => {})
+  }, [])
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
@@ -63,23 +61,25 @@ export default function BlindMyScreen({ onTabChange }: Props) {
       <div className={styles.section}>
         <div className={styles.profileCard}>
           <div className={styles.profileRow}>
-            <img src={MOCK_USER.avatar} alt="프로필 사진" className={styles.avatar} />
-            <span className={styles.nickname}>{MOCK_USER.nickname}</span>
+            <div className={`${styles.avatar} bg-[#FFD60A] flex items-center justify-center rounded-full text-black font-bold text-xl`}>
+              {me ? me.nickname[0].toUpperCase() : '?'}
+            </div>
+            <span className={styles.nickname}>{me ? me.nickname : '불러오는 중...'}</span>
           </div>
 
           <div className={styles.statsRow}>
             <div className={styles.statItem}>
-              <span className={styles.statNumber}>{MOCK_USER.postCount}</span>
+              <span className={styles.statNumber}>2</span>
               <span className={styles.statLabel}>내 글</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.statItem}>
-              <span className={styles.statNumber}>{MOCK_USER.commentCount}</span>
+              <span className={styles.statNumber}>3</span>
               <span className={styles.statLabel}>댓글</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.statItem}>
-              <span className={styles.statNumber}>{MOCK_USER.likeCount}</span>
+              <span className={styles.statNumber}>9</span>
               <span className={styles.statLabel}>공감</span>
             </div>
           </div>

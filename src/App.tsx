@@ -6,15 +6,19 @@ import BlindHomeScreen from './screens/BlindHomeScreen'
 import TestScreen from './screens/TestScreen'
 import Toast from './components/Toast'
 import { type DisabilityType } from './services/auth'
+import { setMode } from './services/users'
 
 type Screen = 'test' | 'login' | 'onboarding' | 'signup' | 'blindHome'
 
-const INITIAL_SCREEN: Screen = import.meta.env.DEV ? 'test' : 'login'
+// mock 모드일 때만 TestScreen 진입. 실제 백엔드 연결 시에는 바로 login으로.
+const INITIAL_SCREEN: Screen = import.meta.env.DEV && import.meta.env.VITE_MOCK_API === 'true' ? 'test' : 'login'
 
 function App() {
   const [screen, setScreen] = useState<Screen>(INITIAL_SCREEN)
   const [toastMessage, setToastMessage] = useState('')
-  const [pendingMode, setPendingMode] = useState<DisabilityType>('none')
+  const [pendingMode, setPendingMode] = useState<DisabilityType>('default')
+  // 로그인은 됐으나 장애 모드가 미설정된 경우 온보딩만 진행
+  const [isReturningUserOnboarding, setIsReturningUserOnboarding] = useState(false)
 
   const showToast = (message: string, onDone: () => void) => {
     setToastMessage(message)
@@ -31,9 +35,25 @@ function App() {
     })
   }
 
-  const handleOnboardingNext = (mode: DisabilityType) => {
-    setPendingMode(mode)
-    setScreen('signup')
+  // 로그인은 됐으나 needs_onboarding: true인 경우 — 장애 모드 선택 후 setMode 호출
+  const handleLoginNeedsOnboarding = () => {
+    setIsReturningUserOnboarding(true)
+    setScreen('onboarding')
+  }
+
+  const handleOnboardingNext = async (mode: DisabilityType) => {
+    if (isReturningUserOnboarding) {
+      setIsReturningUserOnboarding(false)
+      try {
+        await setMode(mode)
+        showToast('환경 설정이 완료되었습니다.', () => setScreen('blindHome'))
+      } catch {
+        showToast('오류가 발생했습니다. 다시 로그인해주세요.', () => setScreen('login'))
+      }
+    } else {
+      setPendingMode(mode)
+      setScreen('signup')
+    }
   }
 
   const handleSignupSuccess = (disabilityType: DisabilityType) => {
@@ -57,7 +77,7 @@ function App() {
     if (screen === 'test') return (
       <TestScreen
         onGoLogin={() => setScreen('login')}
-        onGoSignup={() => { setPendingMode('none'); setScreen('signup') }}
+        onGoSignup={() => { setPendingMode('default'); setScreen('signup') }}
         onGoOnboarding={() => setScreen('onboarding')}
         onGoHome={handleLoginSuccess}
       />
@@ -74,6 +94,7 @@ function App() {
     return (
       <LoginScreen
         onLogin={handleLoginSuccess}
+        onNeedsOnboarding={handleLoginNeedsOnboarding}
         onSignup={() => setScreen('onboarding')}
       />
     )
