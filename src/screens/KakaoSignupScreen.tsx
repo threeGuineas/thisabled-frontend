@@ -190,35 +190,6 @@ export default function KakaoSignupScreen({ signupToken, uiMode, onSuccess, onTo
       <p className={styles.subtitle}>카카오 계정으로 가입을 완료해주세요</p>
 
       <div className={styles.form}>
-        {/* 닉네임 */}
-        <div className={styles.fieldWrapper}>
-          <label htmlFor="nickname" className={styles.label}>닉네임</label>
-          <input
-            id="nickname"
-            type="text"
-            placeholder="2~12자, 한글·영문·숫자만 입력해주세요"
-            maxLength={12}
-            value={nickname}
-            onChange={(e) => { setNickname(e.target.value); setNicknameError('') }}
-            className={nicknameError ? styles.inputError : styles.input}
-          />
-          {nicknameError && <p className={styles.errorText}>{nicknameError}</p>}
-        </div>
-
-        {/* 생년월일 */}
-        <div className={styles.fieldWrapper}>
-          <label htmlFor="birth-date" className={styles.label}>생년월일</label>
-          <input
-            id="birth-date"
-            type="date"
-            max={MAX_BIRTH_DATE}
-            value={birthDate}
-            onChange={(e) => handleBirthDateChange(e.target.value)}
-            className={birthDateError ? styles.inputError : styles.input}
-          />
-          {birthDateError && <p className={styles.errorText}>{birthDateError}</p>}
-        </div>
-
         {/* 프로필 사진 (선택) */}
         <div className={styles.fieldWrapper}>
           <label className={styles.label}>
@@ -257,6 +228,35 @@ export default function KakaoSignupScreen({ signupToken, uiMode, onSuccess, onTo
             )}
             {photoError && <p className={styles.errorText}>{photoError}</p>}
           </div>
+        </div>
+
+        {/* 닉네임 */}
+        <div className={styles.fieldWrapper}>
+          <label htmlFor="nickname" className={styles.label}>닉네임</label>
+          <input
+            id="nickname"
+            type="text"
+            placeholder="2~12자, 한글·영문·숫자만 입력해주세요"
+            maxLength={12}
+            value={nickname}
+            onChange={(e) => { setNickname(e.target.value); setNicknameError('') }}
+            className={nicknameError ? styles.inputError : styles.input}
+          />
+          {nicknameError && <p className={styles.errorText}>{nicknameError}</p>}
+        </div>
+
+        {/* 생년월일 */}
+        <div className={styles.fieldWrapper}>
+          <label htmlFor="birth-date" className={styles.label}>생년월일</label>
+          <input
+            id="birth-date"
+            type="date"
+            max={MAX_BIRTH_DATE}
+            value={birthDate}
+            onChange={(e) => handleBirthDateChange(e.target.value)}
+            className={birthDateError ? styles.inputError : styles.input}
+          />
+          {birthDateError && <p className={styles.errorText}>{birthDateError}</p>}
         </div>
 
         {/* 자기소개 (선택) */}
