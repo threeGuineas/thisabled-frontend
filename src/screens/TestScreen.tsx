@@ -2,7 +2,7 @@ import { IS_MOCK_API, toggleMockApi, type DisabilityType } from '../services/aut
 
 interface Props {
   onGoLogin: () => void
-  onGoSignup: () => void
+  onGoKakaoSignup: () => void
   onGoOnboarding: () => void
   onGoHome: (disabilityType: DisabilityType) => void
 }
@@ -14,13 +14,13 @@ interface NavItem {
   color: 'yellow' | 'gray' | 'black'
 }
 
-export default function TestScreen({ onGoLogin, onGoSignup, onGoOnboarding, onGoHome }: Props) {
+export default function TestScreen({ onGoLogin, onGoKakaoSignup, onGoOnboarding, onGoHome }: Props) {
   const sections: { title: string; items: NavItem[] }[] = [
     {
       title: '인증 화면',
       items: [
-        { label: '로그인', sub: 'LoginScreen', onClick: onGoLogin, color: 'yellow' },
-        { label: '회원가입', sub: 'SignupScreen', onClick: onGoSignup, color: 'yellow' },
+        { label: '로그인', sub: 'LoginScreen (카카오 버튼)', onClick: onGoLogin, color: 'yellow' },
+        { label: '카카오 신규가입', sub: 'KakaoSignupScreen', onClick: onGoKakaoSignup, color: 'yellow' },
         { label: '온보딩 (장애 유형 선택)', sub: 'OnboardingScreen', onClick: onGoOnboarding, color: 'yellow' },
       ],
     },
@@ -89,18 +89,14 @@ export default function TestScreen({ onGoLogin, onGoSignup, onGoOnboarding, onGo
       {/* Mock 사용 안내 */}
       {IS_MOCK_API && (
         <div className="mt-8 rounded-2xl bg-[#F7F7F9] border border-[#EBEBEF] px-5 py-4">
-          <p className="text-xs font-semibold text-[#666666] mb-2">Mock 테스트 닉네임</p>
+          <p className="text-xs font-semibold text-[#666666] mb-2">Mock 동작 안내</p>
           <div className="flex flex-col gap-1">
             {[
-              ['visual', '로그인 → 시각장애 홈'],
-              ['hearing', '로그인 → 청각장애 홈'],
-              ['developmental', '로그인 → 발달장애 홈'],
-              ['default', '로그인 → 기본 홈'],
-              ['error', '로그인 → 401 오류 발생'],
-              ['taken', '회원가입 → 409 닉네임 중복'],
-            ].map(([nick, desc]) => (
-              <div key={nick} className="flex items-baseline gap-2">
-                <code className="text-xs font-bold text-[#000000] bg-[#EBEBEF] px-1.5 py-0.5 rounded">{nick}</code>
+              ['로그인', '카카오 버튼 → 시각장애 기존 사용자로 자동 로그인'],
+              ['카카오 신규가입', '신규가입 화면으로 직접 이동 (mock 토큰 사용)'],
+            ].map(([btn, desc]) => (
+              <div key={btn} className="flex items-baseline gap-2 flex-wrap">
+                <code className="text-xs font-bold text-[#000000] bg-[#EBEBEF] px-1.5 py-0.5 rounded">{btn}</code>
                 <span className="text-xs text-[#757575]">{desc}</span>
               </div>
             ))}

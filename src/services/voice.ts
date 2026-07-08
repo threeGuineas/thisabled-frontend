@@ -1,4 +1,3 @@
-import { API_BASE_URL } from './posts'
 import { authedRequest, IS_MOCK } from './auth'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -17,7 +16,7 @@ export async function describeImage(imageUrl: string): Promise<string> {
     return MOCK_DESCRIPTIONS[Math.abs(imageUrl.length) % MOCK_DESCRIPTIONS.length]
   }
   try {
-    const data = await authedRequest<{ description: string }>(`${API_BASE_URL}/api/v1/vision/describe`, {
+    const data = await authedRequest<{ description: string }>('/api/v1/vision/describe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_url: imageUrl }),
@@ -58,7 +57,7 @@ export async function transcribeAudio(blob: Blob): Promise<string> {
   }
   const formData = new FormData()
   formData.append('file', blob, 'voice.webm')
-  const data = await authedRequest<{ text: string; duration_ms: number }>(`${API_BASE_URL}/api/v1/stt/transcribe`, {
+  const data = await authedRequest<{ text: string; duration_ms: number }>('/api/v1/stt/transcribe', {
     method: 'POST',
     body: formData,
   })

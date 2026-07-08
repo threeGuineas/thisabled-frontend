@@ -8,7 +8,8 @@ export interface Post {
   created_at: string
 }
 
-export const API_BASE_URL = ''
+// dev: vite proxy가 /api를 백엔드로 전달하므로 상대 경로 사용. prod: 정적 빌드엔 프록시가 없으므로 백엔드 주소 직접 지정.
+export const API_BASE_URL = import.meta.env.PROD ? (import.meta.env.VITE_BACKEND_URL as string) : ''
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 

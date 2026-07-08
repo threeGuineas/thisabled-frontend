@@ -1,65 +1,42 @@
 import { useState } from 'react'
 import styles from './LoginScreen.styles'
-import eyeOpen from '../assets/images/eye-open.svg'
-import eyeClosed from '../assets/images/eye-closed.svg'
-import { login, getMe, tokenStorage, type DisabilityType } from '../services/auth'
-
-interface FormErrors {
-  nickname: string
-  password: string
-  login: string
-}
+import { initiateKakaoLogin, tokenStorage, getMe, type DisabilityType } from '../services/auth'
 
 interface Props {
   onLogin: (disabilityType: DisabilityType) => void
   onNeedsOnboarding: () => void
-  onSignup: () => void
+  onKakaoNewUser: (signupToken: string) => void
 }
 
-export default function LoginScreen({ onLogin, onNeedsOnboarding, onSignup }: Props) {
-  const [nickname, setNickname] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [errors, setErrors] = useState<FormErrors>({ nickname: '', password: '', login: '' })
+export default function LoginScreen({ onLogin, onNeedsOnboarding, onKakaoNewUser }: Props) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const clearError = (field: keyof FormErrors) => {
-    setErrors((prev) => ({ ...prev, [field]: '' }))
-  }
-
-  const handleLogin = async () => {
-    const newErrors: FormErrors = { nickname: '', password: '', login: '' }
-
-    if (!nickname.trim()) {
-      newErrors.nickname = '닉네임을 입력해주세요.'
-    }
-    if (!password) {
-      newErrors.password = '비밀번호를 입력해주세요.'
-    }
-
-    if (newErrors.nickname || newErrors.password) {
-      setErrors(newErrors)
-      return
-    }
-
+  const handleKakaoLogin = async () => {
     setLoading(true)
+    setError('')
     try {
-      const { access_token, needs_onboarding } = await login(nickname.trim(), password)
-      tokenStorage.set(access_token)
+      const result = await initiateKakaoLogin()
+      if (!result) return // 실제 카카오: 브라우저가 리다이렉트됨
 
-      if (needs_onboarding) {
-        onNeedsOnboarding()
+      if (result.is_new_user) {
+        onKakaoNewUser(result.signup_token!)
         return
       }
 
+      tokenStorage.set(result.access_token!)
       const me = await getMe()
-      onLogin(me.disability_mode ?? 'default')
+      if (!me.disability_mode) {
+        onNeedsOnboarding()
+      } else {
+        onLogin(me.disability_mode)
+      }
     } catch (err: unknown) {
       const apiErr = err as { status?: number }
-      if (apiErr?.status === 401) {
-        setErrors((prev) => ({ ...prev, login: '닉네임 또는 비밀번호가 올바르지 않습니다.' }))
+      if (apiErr?.status === 502) {
+        setError('카카오 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.')
       } else {
-        setErrors((prev) => ({ ...prev, login: '서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.' }))
+        setError('로그인 중 오류가 발생했어요. 다시 시도해주세요.')
       }
     } finally {
       setLoading(false)
@@ -73,76 +50,31 @@ export default function LoginScreen({ onLogin, onNeedsOnboarding, onSignup }: Pr
         <p className={styles.subtitle}>장애인 맞춤형 AI 소셜 커뮤니티</p>
       </div>
 
-      <div className={styles.form}>
-        {/* 닉네임 */}
-        <div className={styles.fieldWrapper}>
-          <label className={styles.label}>닉네임</label>
-          <input
-            type="text"
-            placeholder="닉네임을 입력해주세요"
-            value={nickname}
-            onChange={(e) => {
-              setNickname(e.target.value)
-              clearError('nickname')
-            }}
-            className={errors.nickname ? styles.inputError : styles.input}
-          />
-          {errors.nickname && <p className={styles.errorText}>{errors.nickname}</p>}
-        </div>
-
-        {/* 비밀번호 */}
-        <div className={styles.fieldWrapper}>
-          <label className={styles.label}>비밀번호</label>
-          <div className={styles.passwordWrapper}>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="비밀번호를 입력해주세요"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                clearError('password')
-                clearError('login')
-              }}
-              className={errors.password ? styles.inputError : styles.input}
-            />
-            <button
-              type="button"
-              className={styles.eyeButton}
-              onClick={() => setShowPassword((prev) => !prev)}
-            >
-              <img
-                src={showPassword ? eyeOpen : eyeClosed}
-                alt={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
-                className={styles.eyeIcon}
-              />
-            </button>
-          </div>
-          {errors.password && <p className={styles.errorText}>{errors.password}</p>}
-        </div>
-      </div>
-
-      <button
-        type="button"
-        disabled={!password || loading}
-        onClick={handleLogin}
-        className={[
-          styles.loginButtonBase,
-          password && !loading ? styles.loginButtonActive : styles.loginButtonDisabled,
-        ].join(' ')}
-      >
-        {loading ? '로그인 중...' : '로그인'}
-      </button>
-
-      {errors.login && <p className={styles.loginError}>{errors.login}</p>}
-
-      <div className={styles.signupSection}>
-        <div className={styles.signupDivider}>
-          <hr className={styles.signupDividerLine} />
-          <p className={styles.signupGuide}>처음이신가요?</p>
-          <hr className={styles.signupDividerLine} />
-        </div>
-        <button type="button" className={styles.signupButton} onClick={onSignup}>회원가입</button>
+      <div className={styles.buttonSection}>
+        <button
+          type="button"
+          onClick={handleKakaoLogin}
+          disabled={loading}
+          className={styles.kakaoButton}
+        >
+          <KakaoLogo />
+          <span>{loading ? '로그인 중...' : '카카오로 시작하기'}</span>
+        </button>
+        {error && <p className={styles.errorText}>{error}</p>}
       </div>
     </div>
+  )
+}
+
+function KakaoLogo() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M10 2.5C5.858 2.5 2.5 5.186 2.5 8.5c0 2.12 1.318 3.99 3.318 5.121l-.84 3.118a.25.25 0 0 0 .376.28l3.68-2.352A9.26 9.26 0 0 0 10 14.5c4.142 0 7.5-2.686 7.5-6s-3.358-6-7.5-6z"
+        fill="rgba(0,0,0,0.85)"
+      />
+    </svg>
   )
 }
