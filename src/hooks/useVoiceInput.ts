@@ -38,7 +38,7 @@ export function useVoiceInput(onResult: (text: string) => void) {
   useEffect(() => () => {
     recorderRef.current?.stop()
     streamRef.current?.getTracks().forEach(t => t.stop())
-    speechSynthesis.cancel()
+    window.speechSynthesis?.cancel()
   }, [])
 
   const stopRecording = useCallback(() => {

@@ -4,6 +4,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // getVoices()는 비동기 로딩이므로 voiceschanged 이벤트 대기 후 한국어 음성 선택
 export function speakText(text: string, onEnd: () => void): void {
+  if (!window.speechSynthesis) { onEnd(); return }
   window.speechSynthesis.cancel()
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = 'ko-KR'

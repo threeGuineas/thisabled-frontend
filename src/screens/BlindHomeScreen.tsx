@@ -133,14 +133,14 @@ export default function BlindHomeScreen() {
 
   const handleDescribeImage = async (post: Post, image: PostMediaItem) => {
     if (audioState?.postId === post.id) {
-      window.speechSynthesis.cancel()
+      window.speechSynthesis?.cancel()
       describeRequestRef.current += 1
       setAudioState(null)
       return
     }
 
     const token = (describeRequestRef.current += 1)
-    window.speechSynthesis.cancel()
+    window.speechSynthesis?.cancel()
 
     if (image.description_status === 'done' && image.description) {
       setAudioState({ postId: post.id, status: 'speaking' })
