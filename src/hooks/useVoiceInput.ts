@@ -98,7 +98,8 @@ export function useVoiceInput(onResult: (text: string) => void) {
           setVoiceState('error')
           speak('음성을 인식하지 못했습니다. 다시 시도해 주세요.')
         }
-      } catch {
+      } catch (e) {
+        console.error('[voice] transcribe failed', e)
         setVoiceError('음성 인식에 실패했어요. 다시 시도해주세요.')
         setVoiceState('error')
         speak('음성 인식에 실패했습니다. 다시 시도해 주세요.')
