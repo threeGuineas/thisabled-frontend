@@ -55,8 +55,9 @@ export async function transcribeAudio(blob: Blob): Promise<string> {
     await sleep(1000)
     return '음성 인식 테스트 텍스트입니다.'
   }
+  const ext = blob.type.includes('mp4') ? 'mp4' : 'webm'
   const formData = new FormData()
-  formData.append('file', blob, 'voice.webm')
+  formData.append('file', blob, `voice.${ext}`)
   const data = await authedRequest<{ text: string; duration_ms: number }>('/api/v1/stt/transcribe', {
     method: 'POST',
     body: formData,
