@@ -6,15 +6,18 @@ export type VoiceState = 'idle' | 'recording' | 'transcribing' | 'error'
 function speak(text: string): Promise<void> {
   return new Promise((resolve) => {
     if (!window.speechSynthesis) { resolve(); return }
-    speechSynthesis.cancel()
+    // speak()를 setTimeout 등으로 지연시키면 iOS Safari 등에서 사용자 제스처 컨텍스트가
+    // 끊겨 음성이 아예 재생되지 않으므로, 반드시 호출 스택 내에서 동기적으로 speak()한다.
+    if (speechSynthesis.speaking || speechSynthesis.pending) {
+      speechSynthesis.cancel()
+    }
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'ko-KR'
     // Chrome의 onend 미발화 버그 대비 타임아웃 fallback
     const timer = setTimeout(resolve, 3000)
     utterance.onend = () => { clearTimeout(timer); resolve() }
     utterance.onerror = () => { clearTimeout(timer); resolve() }
-    // cancel() 직후 speak()하면 Chrome에서 첫 음절이 잘리는 버그 대비
-    setTimeout(() => speechSynthesis.speak(utterance), 50)
+    speechSynthesis.speak(utterance)
   })
 }
 

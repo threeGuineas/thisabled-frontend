@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+html, body, #root {
+  background-color: #000;
+}
+
 @font-face {
   font-family: 'Pretendard';
   src: url('./assets/fonts/Pretendard-Regular.woff2') format('woff2');
