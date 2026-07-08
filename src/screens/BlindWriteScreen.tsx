@@ -12,6 +12,8 @@ import sendGIcon from '../assets/images/send-g.svg'
 import { uploadImages, createPost } from '../services/posts'
 import Toast from '../components/Toast'
 
+const MAX_IMAGES = 3
+
 const CATEGORIES = [
   { id: '일상', label: '일상', desc: '오늘의 이야기를 나눠요' },
   { id: '정보', label: '정보', desc: '유용한 정보를 공유해요' },
@@ -28,8 +30,8 @@ export default function BlindWriteScreen({ onBack }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
   const [step, setStep] = useState<1 | 2>(1)
   const [content, setContent] = useState('')
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
@@ -62,29 +64,34 @@ export default function BlindWriteScreen({ onBack }: Props) {
   // 이전 preview URL 해제 (메모리 누수 방지)
   useEffect(() => {
     return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview)
+      imagePreviews.forEach((url) => URL.revokeObjectURL(url))
     }
-  }, [imagePreview])
+  }, [imagePreviews])
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value)
   }
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (imagePreview) URL.revokeObjectURL(imagePreview)
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
-    setSubmitError(null)
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
+    const room = MAX_IMAGES - imageFiles.length
+    const accepted = files.slice(0, room)
+    if (files.length > room) {
+      setSubmitError(`사진은 최대 ${MAX_IMAGES}장까지 첨부할 수 있어요.`)
+    } else {
+      setSubmitError(null)
+    }
+    setImageFiles((prev) => [...prev, ...accepted])
+    setImagePreviews((prev) => [...prev, ...accepted.map((file) => URL.createObjectURL(file))])
     // 같은 파일 재선택 허용
     e.target.value = ''
   }
 
-  const handleRemoveImage = () => {
-    if (imagePreview) URL.revokeObjectURL(imagePreview)
-    setImageFile(null)
-    setImagePreview(null)
+  const handleRemoveImage = (index: number) => {
+    URL.revokeObjectURL(imagePreviews[index])
+    setImageFiles((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async () => {
@@ -94,8 +101,8 @@ export default function BlindWriteScreen({ onBack }: Props) {
 
     try {
       let mediaIds: string[] = []
-      if (imageFile) {
-        const uploaded = await uploadImages([imageFile])
+      if (imageFiles.length > 0) {
+        const uploaded = await uploadImages(imageFiles)
         mediaIds = uploaded.map((m) => m.media_id)
       }
       await createPost(content.trim(), mediaIds)
@@ -168,17 +175,21 @@ export default function BlindWriteScreen({ onBack }: Props) {
               disabled={isSubmitting}
             />
 
-            {imagePreview && (
-              <div className="relative mx-5 mt-3">
-                <img src={imagePreview} alt="첨부 이미지 미리보기" className="w-full rounded-2xl object-contain" />
-                <button
-                  type="button"
-                  onClick={handleRemoveImage}
-                  className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white text-sm font-bold"
-                  aria-label="이미지 삭제"
-                >
-                  ✕
-                </button>
+            {imagePreviews.length > 0 && (
+              <div className="mx-5 mt-3 flex gap-2">
+                {imagePreviews.map((preview, index) => (
+                  <div key={preview} className="relative flex-1">
+                    <img src={preview} alt={`첨부 이미지 미리보기 ${index + 1}`} className="w-full rounded-2xl object-cover aspect-square" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white text-sm font-bold"
+                      aria-label={`이미지 ${index + 1} 삭제`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -198,6 +209,7 @@ export default function BlindWriteScreen({ onBack }: Props) {
             accept="image/jpeg,image/png,image/gif,image/webp"
             aria-label="이미지 파일 선택"
             className="hidden"
+            multiple
             onChange={handleImageSelect}
           />
 
@@ -207,10 +219,12 @@ export default function BlindWriteScreen({ onBack }: Props) {
                 type="button"
                 className={styles.photoButton}
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isSubmitting}
+                disabled={isSubmitting || imageFiles.length >= MAX_IMAGES}
               >
                 <img src={imageWIcon} alt="사진" className={styles.photoIcon} />
-                <span className={styles.photoText}>사진</span>
+                <span className={styles.photoText}>
+                  사진{imageFiles.length > 0 ? ` ${imageFiles.length}/${MAX_IMAGES}` : ''}
+                </span>
               </button>
               <button
                 type="button"
