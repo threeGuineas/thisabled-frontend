@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react'
 import OnboardingScreen from './screens/OnboardingScreen'
 import LoginScreen from './screens/LoginScreen'
 import KakaoSignupScreen from './screens/KakaoSignupScreen'
-import ProfileSetupScreen from './screens/ProfileSetupScreen'
+import InterestTagsScreen from './screens/InterestTagsScreen'
 import BlindHomeScreen from './screens/BlindHomeScreen'
 import TestScreen from './screens/TestScreen'
 import Toast from './components/Toast'
 import { type DisabilityType, tokenStorage, getMe } from './services/auth'
 import { setMode } from './services/users'
 
-type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'profileSetup' | 'blindHome'
+type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome'
+
+// 'existingUser': 로그인 후 모드 미설정 → 선택 즉시 PUT /users/me/mode 호출
+// 'newSignup': 카카오 신규가입 전 모드 선택 → KakaoSignupScreen으로 전달, 가입 시 함께 제출
+type OnboardingContext = 'existingUser' | 'newSignup'
 
 const INITIAL_SCREEN: Screen = import.meta.env.DEV && import.meta.env.VITE_MOCK_API === 'true' ? 'test' : 'login'
 
@@ -17,7 +21,8 @@ function App() {
   const [screen, setScreen] = useState<Screen>(INITIAL_SCREEN)
   const [toastMessage, setToastMessage] = useState('')
   const [signupToken, setSignupToken] = useState('')
-  const [isReturningUserOnboarding, setIsReturningUserOnboarding] = useState(false)
+  const [signupUiMode, setSignupUiMode] = useState<DisabilityType>('visual')
+  const [onboardingContext, setOnboardingContext] = useState<OnboardingContext>('existingUser')
 
   const showToast = (message: string, onDone: () => void) => {
     setToastMessage(message)
@@ -36,36 +41,36 @@ function App() {
 
   const handleKakaoNewUser = (token: string) => {
     setSignupToken(token)
-    setScreen('kakaoSignup')
+    setOnboardingContext('newSignup')
+    setScreen('onboarding')
   }
 
   const handleLoginNeedsOnboarding = () => {
-    setIsReturningUserOnboarding(true)
+    setOnboardingContext('existingUser')
     setScreen('onboarding')
   }
 
   const handleOnboardingNext = async (mode: DisabilityType) => {
-    if (isReturningUserOnboarding) {
-      setIsReturningUserOnboarding(false)
-      try {
-        await setMode(mode)
-        showToast('환경 설정이 완료되었습니다.', () => setScreen('blindHome'))
-      } catch {
-        showToast('오류가 발생했습니다. 다시 로그인해주세요.', () => setScreen('login'))
-      }
+    if (onboardingContext === 'newSignup') {
+      setSignupUiMode(mode)
+      setScreen('kakaoSignup')
+      return
+    }
+
+    try {
+      await setMode(mode)
+      showToast('환경 설정이 완료되었습니다.', () => setScreen('blindHome'))
+    } catch {
+      showToast('오류가 발생했습니다. 다시 로그인해주세요.', () => setScreen('login'))
     }
   }
 
-  const handleKakaoSignupSuccess = (_disabilityType: DisabilityType) => {
-    setScreen('profileSetup')
-    // TODO: 다른 장애 유형 화면 구현 후 라우팅 추가
+  const handleKakaoSignupSuccess = () => {
+    setScreen('interestTags')
   }
 
-  const handleProfileSetupDone = () => {
-    showToast('회원가입이 완료되었습니다.', () => {
-      setScreen('blindHome')
-      // TODO: 다른 장애 유형 화면 구현 후 라우팅 추가
-    })
+  const handleInterestTagsDone = () => {
+    showToast('회원가입이 완료되었습니다.', () => setScreen('blindHome'))
   }
 
   // 카카오 콜백: 백엔드가 {FRONTEND_URL}?is_new_user=...&signup_token=... 로 리다이렉트한 경우 처리
@@ -81,7 +86,8 @@ function App() {
       const token = params.get('signup_token')
       if (token) {
         setSignupToken(token)
-        setScreen('kakaoSignup')
+        setOnboardingContext('newSignup')
+        setScreen('onboarding')
       }
     } else if (isNewUser === 'false') {
       const token = params.get('access_token')
@@ -90,7 +96,7 @@ function App() {
         getMe()
           .then((me) => {
             if (!me.disability_mode) {
-              setIsReturningUserOnboarding(true)
+              setOnboardingContext('existingUser')
               setScreen('onboarding')
             } else {
               showToast('로그인이 완료되었습니다.', () => setScreen('blindHome'))
@@ -115,8 +121,8 @@ function App() {
     if (screen === 'test') return (
       <TestScreen
         onGoLogin={() => setScreen('login')}
-        onGoKakaoSignup={() => { setSignupToken('mock-signup-token'); setScreen('kakaoSignup') }}
-        onGoOnboarding={() => setScreen('onboarding')}
+        onGoKakaoSignup={() => { setSignupToken('mock-signup-token'); setOnboardingContext('newSignup'); setScreen('onboarding') }}
+        onGoOnboarding={() => { setOnboardingContext('existingUser'); setScreen('onboarding') }}
         onGoHome={handleLoginSuccess}
       />
     )
@@ -124,12 +130,13 @@ function App() {
     if (screen === 'kakaoSignup') return (
       <KakaoSignupScreen
         signupToken={signupToken}
+        uiMode={signupUiMode}
         onSuccess={handleKakaoSignupSuccess}
         onTokenExpired={() => setScreen('login')}
-        onBack={() => setScreen('login')}
+        onBack={() => { setOnboardingContext('newSignup'); setScreen('onboarding') }}
       />
     )
-    if (screen === 'profileSetup') return <ProfileSetupScreen onDone={handleProfileSetupDone} />
+    if (screen === 'interestTags') return <InterestTagsScreen onDone={handleInterestTagsDone} />
     if (screen === 'blindHome') return <BlindHomeScreen />
     return (
       <LoginScreen

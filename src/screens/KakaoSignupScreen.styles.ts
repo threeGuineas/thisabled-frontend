@@ -60,32 +60,58 @@ const styles = {
     'text-[#FF3B30] mt-1',
   ].join(' '),
 
-  modeGrid: 'grid grid-cols-3 gap-2',
-
-  modeCard: [
-    'flex flex-col items-center gap-2',
-    'rounded-2xl',
-    `border-2 ${colors.border.gray03} ${colors.bg.gray04}`,
-    'py-4 cursor-pointer select-none transition-colors',
-  ].join(' '),
-
-  modeCardSelected: [
-    'flex flex-col items-center gap-2',
-    'rounded-2xl',
-    'border-2 border-[#FFD60A] bg-[#FFFAE1]',
-    'py-4 cursor-pointer select-none transition-colors',
-  ].join(' '),
-
-  modeIcon: 'w-6 h-6',
-
-  modeLabel: [
+  optionalLabel: [
     typography.xs, typography.medium,
-    colors.text.gray01,
+    colors.text.gray02,
   ].join(' '),
 
-  modeLabelSelected: [
-    typography.xs, typography.semibold,
-    colors.text.black,
+  // 프로필 사진
+  photoSection: 'flex flex-col items-center gap-2',
+
+  avatarWrapper: 'relative w-24 h-24',
+
+  avatarImage: [
+    'w-24 h-24 rounded-full object-cover',
+    `border ${colors.border.gray03}`,
+  ].join(' '),
+
+  avatarPlaceholder: [
+    'w-24 h-24 rounded-full flex items-center justify-center',
+    `border ${colors.border.gray03} ${colors.bg.gray04}`,
+  ].join(' '),
+
+  avatarPlaceholderIcon: 'w-9 h-9 opacity-40',
+
+  avatarEditButton: [
+    'absolute bottom-0 right-0 w-8 h-8 rounded-full',
+    colors.bg.yellow,
+    'flex items-center justify-center border-2 border-white',
+  ].join(' '),
+
+  avatarEditIcon: 'w-4 h-4 brightness-0 invert',
+
+  avatarRemoveButton: [
+    typography.xs, typography.medium,
+    'text-[#9898A8] underline underline-offset-2',
+  ].join(' '),
+
+  // 자기소개
+  textareaWrapper: 'relative',
+
+  textarea: [
+    'w-full rounded-2xl resize-none',
+    `border ${colors.border.gray03} ${colors.bg.gray04}`,
+    'px-5 py-4 pb-7',
+    typography.sm, typography.medium,
+    colors.text.gray01,
+    `outline-none placeholder:${colors.text.gray02}`,
+    `focus:${colors.border.yellow} focus:ring-2 focus:ring-[#FFD60A]/20`,
+  ].join(' '),
+
+  charCounter: [
+    'absolute bottom-3 right-4',
+    typography.xs, typography.medium,
+    colors.text.gray02,
   ].join(' '),
 
   agreementSection: [

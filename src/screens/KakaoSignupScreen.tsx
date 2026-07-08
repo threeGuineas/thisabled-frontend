@@ -1,26 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import styles from './KakaoSignupScreen.styles'
 import backIcon from '../assets/images/back.svg'
 import checkIcon from '../assets/images/check.svg'
-import eyeIcon from '../assets/images/eye.svg'
-import earIcon from '../assets/images/ear.svg'
-import brainIcon from '../assets/images/brain.svg'
+import plusIcon from '../assets/images/plus.svg'
+import avatarPlaceholderIcon from '../assets/images/mypage.svg'
 import { kakaoSignup, tokenStorage, type DisabilityType } from '../services/auth'
+import { uploadImages } from '../services/media'
+import { updateMe, setMode } from '../services/users'
 
 const MIN_AGE = 14
 const NICKNAME_REGEX = /^[가-힣a-zA-Z0-9]{2,12}$/
+const BIO_MAX_LENGTH = 300
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+// signup API의 ui_mode 필드는 '기본화면(default)'을 받지 않는다. 앞선 온보딩 화면에서
+// '기본화면'을 고른 경우, 가입 시엔 임시값으로 채우고 가입 직후 PUT /users/me/mode 로 보정한다.
+function toSignupUiMode(mode: DisabilityType): 'visual' | 'hearing' | 'developmental' {
+  return mode === 'default' ? 'visual' : mode
+}
 
 const MAX_BIRTH_DATE = (() => {
   const d = new Date()
   d.setFullYear(d.getFullYear() - MIN_AGE)
   return d.toISOString().split('T')[0]
 })()
-
-const UI_MODES = [
-  { id: 'visual' as const, icon: eyeIcon, label: '시각장애' },
-  { id: 'hearing' as const, icon: earIcon, label: '청각장애' },
-  { id: 'developmental' as const, icon: brainIcon, label: '발달장애' },
-]
 
 interface Agreements {
   terms: boolean
@@ -30,7 +34,8 @@ interface Agreements {
 
 interface Props {
   signupToken: string
-  onSuccess: (disabilityType: DisabilityType) => void
+  uiMode: DisabilityType
+  onSuccess: () => void
   onTokenExpired: () => void
   onBack: () => void
 }
@@ -44,22 +49,31 @@ function calculateAge(birthDate: string): number {
   return age
 }
 
-export default function KakaoSignupScreen({ signupToken, onSuccess, onTokenExpired, onBack }: Props) {
+export default function KakaoSignupScreen({ signupToken, uiMode, onSuccess, onTokenExpired, onBack }: Props) {
   const [nickname, setNickname] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [birthDateError, setBirthDateError] = useState('')
-  const [uiMode, setUiMode] = useState<'visual' | 'hearing' | 'developmental' | null>(null)
+  const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState('')
+  const [bio, setBio] = useState('')
   const [agreements, setAgreements] = useState<Agreements>({ terms: false, privacy: false, ai_notice: false })
   const [nicknameError, setNicknameError] = useState('')
   const [apiError, setApiError] = useState('')
   const [loading, setLoading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (profileImagePreview) URL.revokeObjectURL(profileImagePreview)
+    }
+  }, [profileImagePreview])
 
   const allAgreed = agreements.terms && agreements.privacy && agreements.ai_notice
   const isValid =
     NICKNAME_REGEX.test(nickname.trim()) &&
     !!birthDate &&
     !birthDateError &&
-    !!uiMode &&
     allAgreed
 
   const toggleAll = () => {
@@ -80,8 +94,33 @@ export default function KakaoSignupScreen({ signupToken, onSuccess, onTokenExpir
     }
   }
 
+  const handlePhotoSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setPhotoError('jpg·png·gif·webp 형식만 업로드할 수 있어요.')
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setPhotoError('이미지 용량은 10MB를 넘을 수 없어요.')
+      return
+    }
+
+    setPhotoError('')
+    setProfileImage(file)
+    setProfileImagePreview(URL.createObjectURL(file))
+  }
+
+  const handlePhotoRemove = () => {
+    setProfileImage(null)
+    setProfileImagePreview(null)
+    setPhotoError('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleSubmit = async () => {
-    if (!uiMode || !isValid) return
+    if (!isValid) return
 
     const trimmedNickname = nickname.trim()
     setLoading(true)
@@ -93,11 +132,10 @@ export default function KakaoSignupScreen({ signupToken, onSuccess, onTokenExpir
         signup_token: signupToken,
         nickname: trimmedNickname,
         birth_date: birthDate,
-        ui_mode: uiMode,
+        ui_mode: toSignupUiMode(uiMode),
         agreements,
       })
       tokenStorage.set(access_token)
-      onSuccess(uiMode)
     } catch (err: unknown) {
       const apiErr = err as { status?: number; detail?: string }
       if (apiErr?.status === 401) {
@@ -107,13 +145,39 @@ export default function KakaoSignupScreen({ signupToken, onSuccess, onTokenExpir
       } else if (apiErr?.status === 409) {
         setNicknameError('이미 사용 중인 닉네임입니다.')
       } else if (apiErr?.status === 400) {
-        setApiError(apiErr.detail ?? '입력 정보를 다시 확인해주세요.')
+        setNicknameError(apiErr.detail ?? '사용할 수 없는 닉네임입니다.')
       } else {
         setApiError('오류가 발생했어요. 잠시 후 다시 시도해주세요.')
       }
-    } finally {
       setLoading(false)
+      return
     }
+
+    // 계정은 이미 생성됨 — 아래 호출들은 모두 선택 입력/보정용이라 실패해도
+    // 가입 자체를 막지 않고 다음 화면으로 진행한다(마이페이지에서 다시 설정 가능).
+    if (uiMode === 'default') {
+      await setMode(uiMode).catch(() => {})
+    }
+
+    try {
+      let profileImageUrl: string | undefined
+      if (profileImage) {
+        const { items } = await uploadImages([profileImage])
+        profileImageUrl = items[0]?.url
+      }
+      const trimmedBio = bio.trim()
+      if (profileImageUrl || trimmedBio) {
+        await updateMe({
+          ...(profileImageUrl ? { profile_image_url: profileImageUrl } : {}),
+          ...(trimmedBio ? { bio: trimmedBio } : {}),
+        })
+      }
+    } catch {
+      // no-op
+    }
+
+    setLoading(false)
+    onSuccess()
   }
 
   return (
@@ -155,26 +219,62 @@ export default function KakaoSignupScreen({ signupToken, onSuccess, onTokenExpir
           {birthDateError && <p className={styles.errorText}>{birthDateError}</p>}
         </div>
 
-        {/* 이용 환경 */}
+        {/* 프로필 사진 (선택) */}
         <div className={styles.fieldWrapper}>
-          <label className={styles.label}>이용 환경 선택</label>
-          <div className={styles.modeGrid}>
-            {UI_MODES.map((mode) => {
-              const isSelected = uiMode === mode.id
-              return (
-                <button
-                  key={mode.id}
-                  type="button"
-                  onClick={() => setUiMode(mode.id)}
-                  className={isSelected ? styles.modeCardSelected : styles.modeCard}
-                >
-                  <img src={mode.icon} alt="" className={styles.modeIcon} />
-                  <span className={isSelected ? styles.modeLabelSelected : styles.modeLabel}>
-                    {mode.label}
-                  </span>
-                </button>
-              )
-            })}
+          <label className={styles.label}>
+            프로필 사진 <span className={styles.optionalLabel}>(선택)</span>
+          </label>
+          <div className={styles.photoSection}>
+            <div className={styles.avatarWrapper}>
+              {profileImagePreview ? (
+                <img src={profileImagePreview} alt="프로필 미리보기" className={styles.avatarImage} />
+              ) : (
+                <div className={styles.avatarPlaceholder}>
+                  <img src={avatarPlaceholderIcon} alt="" className={styles.avatarPlaceholderIcon} />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className={styles.avatarEditButton}
+                aria-label="프로필 사진 선택"
+              >
+                <img src={plusIcon} alt="" className={styles.avatarEditIcon} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handlePhotoSelect}
+                className="hidden"
+                aria-label="프로필 사진 선택"
+              />
+            </div>
+            {profileImagePreview && (
+              <button type="button" onClick={handlePhotoRemove} className={styles.avatarRemoveButton}>
+                사진 삭제
+              </button>
+            )}
+            {photoError && <p className={styles.errorText}>{photoError}</p>}
+          </div>
+        </div>
+
+        {/* 자기소개 (선택) */}
+        <div className={styles.fieldWrapper}>
+          <label htmlFor="bio" className={styles.label}>
+            자기소개 <span className={styles.optionalLabel}>(선택)</span>
+          </label>
+          <div className={styles.textareaWrapper}>
+            <textarea
+              id="bio"
+              rows={4}
+              placeholder="나를 소개하는 글을 남겨보세요"
+              maxLength={BIO_MAX_LENGTH}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              className={styles.textarea}
+            />
+            <span className={styles.charCounter}>{bio.length}/{BIO_MAX_LENGTH}</span>
           </div>
         </div>
 

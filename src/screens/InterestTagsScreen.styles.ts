@@ -45,55 +45,6 @@ const styles = {
     'text-[#FF3B30] mt-1',
   ].join(' '),
 
-  // 프로필 사진
-  photoSection: 'flex flex-col items-center gap-2 self-center',
-
-  avatarWrapper: 'relative w-24 h-24',
-
-  avatarImage: [
-    'w-24 h-24 rounded-full object-cover',
-    `border ${colors.border.gray03}`,
-  ].join(' '),
-
-  avatarPlaceholder: [
-    'w-24 h-24 rounded-full flex items-center justify-center',
-    `border ${colors.border.gray03} ${colors.bg.gray04}`,
-  ].join(' '),
-
-  avatarPlaceholderIcon: 'w-9 h-9 opacity-40',
-
-  avatarEditButton: [
-    'absolute bottom-0 right-0 w-8 h-8 rounded-full',
-    colors.bg.yellow,
-    'flex items-center justify-center border-2 border-white',
-  ].join(' '),
-
-  avatarEditIcon: 'w-4 h-4 brightness-0 invert',
-
-  avatarRemoveButton: [
-    typography.xs, typography.medium,
-    'text-[#9898A8] underline underline-offset-2',
-  ].join(' '),
-
-  // 자기소개
-  textareaWrapper: 'relative',
-
-  textarea: [
-    'w-full rounded-2xl resize-none',
-    `border ${colors.border.gray03} ${colors.bg.gray04}`,
-    'px-5 py-4 pb-7',
-    typography.sm, typography.medium,
-    colors.text.gray01,
-    `outline-none placeholder:${colors.text.gray02}`,
-    `focus:${colors.border.yellow} focus:ring-2 focus:ring-[#FFD60A]/20`,
-  ].join(' '),
-
-  charCounter: [
-    'absolute bottom-3 right-4',
-    typography.xs, typography.medium,
-    colors.text.gray02,
-  ].join(' '),
-
   // 관심사 태그
   interestList: 'flex flex-col gap-2',
 

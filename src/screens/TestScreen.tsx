@@ -20,7 +20,7 @@ export default function TestScreen({ onGoLogin, onGoKakaoSignup, onGoOnboarding,
       title: '인증 화면',
       items: [
         { label: '로그인', sub: 'LoginScreen (카카오 버튼)', onClick: onGoLogin, color: 'yellow' },
-        { label: '카카오 신규가입', sub: 'KakaoSignupScreen', onClick: onGoKakaoSignup, color: 'yellow' },
+        { label: '카카오 신규가입', sub: 'OnboardingScreen → KakaoSignupScreen', onClick: onGoKakaoSignup, color: 'yellow' },
         { label: '온보딩 (장애 유형 선택)', sub: 'OnboardingScreen', onClick: onGoOnboarding, color: 'yellow' },
       ],
     },
