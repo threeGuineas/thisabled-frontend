@@ -81,6 +81,20 @@ const mockUsers = {
       tags: [],
     }
   },
+  async getMe(): Promise<MeProfile> {
+    await sleep(300)
+    return {
+      id: 'mock-uuid',
+      nickname: 'testuser',
+      bio: null,
+      profile_image_url: null,
+      ui_mode: 'visual',
+      is_minor: false,
+      stranger_requests_allowed: true,
+      mode_settings: {},
+      tags: [],
+    }
+  },
   async getTags(): Promise<{ tags: Tag[] }> {
     await sleep(300)
     return { tags: MOCK_TAG_CATALOG }
@@ -113,6 +127,12 @@ export function updateMe(patch: UpdateMePayload): Promise<MeProfile> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
   })
+}
+
+// 로그인된 유저의 프로필 조회 (로그인 직후 라우팅 판단용이 아님 — 마이페이지 등에서 사용)
+export function getMe(): Promise<MeProfile> {
+  if (IS_MOCK) return mockUsers.getMe()
+  return authedRequest<MeProfile>('/api/v1/users/me')
 }
 
 // 인증 불필요 — 서버가 관리하는 태그 마스터 카탈로그

@@ -5,7 +5,7 @@ import modeIcon from '../assets/images/mode.svg'
 import checkYIcon from '../assets/images/check-y.svg'
 import alarmIcon from '../assets/images/alarm.svg'
 import mypageWIcon from '../assets/images/mypage-w.svg'
-import { getMe, type MeResponse } from '../services/auth'
+import { getMe, type MeProfile } from '../services/users'
 
 const MODES = [
   { id: 'default',       title: '기본화면', desc: '모든 기능을 기본 UI로' },
@@ -24,7 +24,7 @@ export default function BlindMyScreen({ onTabChange }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('my')
   const [selectedMode, setSelectedMode] = useState<ModeId>('visual')
   const [pendingMode, setPendingMode] = useState<ModeId | null>(null)
-  const [me, setMe] = useState<MeResponse | null>(null)
+  const [me, setMe] = useState<MeProfile | null>(null)
 
   useEffect(() => {
     getMe().then(setMe).catch(() => {})

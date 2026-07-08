@@ -14,13 +14,6 @@ export interface SignupResponse {
   token_type: string
 }
 
-export interface MeResponse {
-  id: string
-  nickname: string
-  disability_mode: DisabilityType | null
-  trust_score: number
-}
-
 export interface NicknameCheckResponse {
   available: boolean
   reason: 'invalid_format' | 'forbidden_word' | 'duplicate' | null
@@ -63,10 +56,6 @@ export const IS_MOCK = _localMock !== null
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 const encodeMockToken = (mode: DisabilityType) => `mock::${mode}`
-const decodeMockToken = (token: string): DisabilityType => {
-  const t = token.split('::')[1] as DisabilityType
-  return ['visual', 'developmental', 'hearing', 'default'].includes(t) ? t : 'visual'
-}
 
 const mockAuth = {
   async login(nickname: string): Promise<LoginResponse> {
@@ -84,11 +73,6 @@ const mockAuth = {
     if (nickname.toLowerCase() === 'taken')
       throw { status: 409, detail: '이미 사용 중인 닉네임입니다' }
     return { access_token: encodeMockToken('visual'), user_id: 'mock-uuid', recovery_code: 'MOCKCODE1234', token_type: 'bearer' }
-  },
-  async getMe(): Promise<MeResponse> {
-    await sleep(300)
-    const token = tokenStorage.get() ?? ''
-    return { id: 'mock-uuid', nickname: 'testuser', disability_mode: decodeMockToken(token), trust_score: 1.0 }
   },
   async checkNickname(nickname: string): Promise<NicknameCheckResponse> {
     await sleep(300)
@@ -177,11 +161,6 @@ export function register(nickname: string, password: string): Promise<SignupResp
     method: 'POST',
     body: JSON.stringify({ nickname, password }),
   })
-}
-
-export function getMe(): Promise<MeResponse> {
-  if (IS_MOCK) return mockAuth.getMe()
-  return authedRequest<MeResponse>('/api/v1/auth/me')
 }
 
 export function checkNickname(nickname: string): Promise<NicknameCheckResponse> {

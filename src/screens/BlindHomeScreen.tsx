@@ -6,7 +6,7 @@ import BlindWriteScreen from './BlindWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
 import { getPosts, type Post, API_BASE_URL } from '../services/posts'
-import { getMe, type MeResponse } from '../services/auth'
+import { getMe, type MeProfile } from '../services/users'
 import { describeImage, speakText } from '../services/voice'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
@@ -55,7 +55,7 @@ export default function BlindHomeScreen() {
   const [showComments, setShowComments] = useState(false)
   const [showWrite, setShowWrite] = useState(false)
 
-  const [me, setMe] = useState<MeResponse | null>(null)
+  const [me, setMe] = useState<MeProfile | null>(null)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   const [posts, setPosts] = useState<Post[]>([])

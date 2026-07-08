@@ -1,16 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import styles from './LoginScreen.styles'
-import { initiateKakaoLogin, tokenStorage, getMe, type DisabilityType } from '../services/auth'
+import { initiateKakaoLogin, tokenStorage } from '../services/auth'
 
 interface Props {
-  onLogin: (disabilityType: DisabilityType) => void
-  onNeedsOnboarding: () => void
+  onLogin: () => void
   onKakaoNewUser: (signupToken: string) => void
+  initialError?: string
 }
 
-export default function LoginScreen({ onLogin, onNeedsOnboarding, onKakaoNewUser }: Props) {
+export default function LoginScreen({ onLogin, onKakaoNewUser, initialError }: Props) {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialError ?? '')
+
+  useEffect(() => {
+    if (initialError) setError(initialError)
+  }, [initialError])
 
   const handleKakaoLogin = async () => {
     setLoading(true)
@@ -25,12 +29,7 @@ export default function LoginScreen({ onLogin, onNeedsOnboarding, onKakaoNewUser
       }
 
       tokenStorage.set(result.access_token!)
-      const me = await getMe()
-      if (!me.disability_mode) {
-        onNeedsOnboarding()
-      } else {
-        onLogin(me.disability_mode)
-      }
+      onLogin()
     } catch (err: unknown) {
       const apiErr = err as { status?: number }
       if (apiErr?.status === 502) {

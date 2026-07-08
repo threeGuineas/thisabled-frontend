@@ -6,7 +6,7 @@ import InterestTagsScreen from './screens/InterestTagsScreen'
 import BlindHomeScreen from './screens/BlindHomeScreen'
 import TestScreen from './screens/TestScreen'
 import Toast from './components/Toast'
-import { type DisabilityType, tokenStorage, getMe } from './services/auth'
+import { type DisabilityType, tokenStorage } from './services/auth'
 import { setMode } from './services/users'
 
 type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome'
@@ -23,6 +23,7 @@ function App() {
   const [signupToken, setSignupToken] = useState('')
   const [signupUiMode, setSignupUiMode] = useState<DisabilityType>('visual')
   const [onboardingContext, setOnboardingContext] = useState<OnboardingContext>('existingUser')
+  const [loginError, setLoginError] = useState('')
 
   const showToast = (message: string, onDone: () => void) => {
     setToastMessage(message)
@@ -32,7 +33,7 @@ function App() {
     }, 1500)
   }
 
-  const handleLoginSuccess = (_disabilityType: DisabilityType) => {
+  const handleLoginSuccess = () => {
     showToast('로그인이 완료되었습니다.', () => {
       setScreen('blindHome')
       // TODO: 다른 장애 유형 화면 구현 후 라우팅 추가
@@ -42,11 +43,6 @@ function App() {
   const handleKakaoNewUser = (token: string) => {
     setSignupToken(token)
     setOnboardingContext('newSignup')
-    setScreen('onboarding')
-  }
-
-  const handleLoginNeedsOnboarding = () => {
-    setOnboardingContext('existingUser')
     setScreen('onboarding')
   }
 
@@ -77,10 +73,16 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const isNewUser = params.get('is_new_user')
-    if (isNewUser === null) return
+    const error = params.get('error')
+    if (isNewUser === null && error === null) return
 
     // 처리 후 URL 파라미터 정리
     window.history.replaceState({}, '', window.location.pathname)
+
+    if (error !== null) {
+      setLoginError('카카오 로그인에 실패했어요. 다시 시도해주세요.')
+      return
+    }
 
     if (isNewUser === 'true') {
       const token = params.get('signup_token')
@@ -93,16 +95,7 @@ function App() {
       const token = params.get('access_token')
       if (token) {
         tokenStorage.set(token)
-        getMe()
-          .then((me) => {
-            if (!me.disability_mode) {
-              setOnboardingContext('existingUser')
-              setScreen('onboarding')
-            } else {
-              showToast('로그인이 완료되었습니다.', () => setScreen('blindHome'))
-            }
-          })
-          .catch(() => setScreen('login'))
+        showToast('로그인이 완료되었습니다.', () => setScreen('blindHome'))
       }
     }
   }, [])
@@ -141,8 +134,8 @@ function App() {
     return (
       <LoginScreen
         onLogin={handleLoginSuccess}
-        onNeedsOnboarding={handleLoginNeedsOnboarding}
         onKakaoNewUser={handleKakaoNewUser}
+        initialError={loginError}
       />
     )
   })()

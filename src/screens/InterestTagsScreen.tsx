@@ -81,11 +81,11 @@ export default function InterestTagsScreen({ onDone }: Props) {
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>관심사를 선택해보세요</h1>
+          <h1 className={styles.title}>관심사를<br />선택해주세요.</h1>
           <p className={styles.subtitle}>지금 하지 않아도 나중에 마이페이지에서 설정할 수 있어요</p>
         </div>
         <button type="button" onClick={onDone} className={styles.skipButton}>
-          건너뛰기
+          스킵
         </button>
       </div>
 
