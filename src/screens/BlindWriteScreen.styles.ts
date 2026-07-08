@@ -51,7 +51,7 @@ const styles = {
   editorActions: 'flex items-center justify-between',
 
   photoButton: [
-    'flex items-center justify-center gap-2 bg-[#161616] rounded-2xl w-[172px] py-5',
+    'flex items-center justify-center gap-2 bg-[#161616] rounded-2xl w-[134px] py-5',
     'active:opacity-70',
   ].join(' '),
   photoIcon: 'w-5 h-5',
