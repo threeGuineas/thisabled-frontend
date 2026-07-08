@@ -5,7 +5,7 @@ import BlindCommentsScreen from './BlindCommentsScreen'
 import BlindWriteScreen from './BlindWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
-import { getPosts, type Post, API_BASE_URL } from '../services/posts'
+import { getFeed, likePost, unlikePost, type Post, API_BASE_URL } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
 import { describeImage, speakText } from '../services/voice'
 import searchWIcon from '../assets/images/search-w.svg'
@@ -17,17 +17,7 @@ import micWIcon from '../assets/images/mic-w.svg'
 
 const LIMIT = 20
 
-const MOCK_NICKNAMES = ['달콤한하루', '하늘산책', '달빛여행', '봄바람', '초록잎']
-
-const FAKE_COUNTS = [
-  { likes: 9, comments: 3 },
-  { likes: 0, comments: 0 },
-  { likes: 0, comments: 0 },
-  { likes: 0, comments: 0 },
-  { likes: 0, comments: 0 },
-]
-
-// UUID 문자열을 안정적인 정수 인덱스로 변환
+// UUID 문자열을 안정적인 정수 인덱스로 변환 (프로필 이미지 없는 작성자의 임시 아바타용)
 function hashId(id: string): number {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
@@ -51,7 +41,6 @@ function timeAgo(isoString: string): string {
 export default function BlindHomeScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [activeFilter, setActiveFilter] = useState('전체')
-  const [likedCards, setLikedCards] = useState<Set<string>>(new Set())
   const [showComments, setShowComments] = useState(false)
   const [showWrite, setShowWrite] = useState(false)
 
@@ -59,7 +48,7 @@ export default function BlindHomeScreen() {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   const [posts, setPosts] = useState<Post[]>([])
-  const [offset, setOffset] = useState(0)
+  const [cursor, setCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -68,7 +57,7 @@ export default function BlindHomeScreen() {
 
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const loadPosts = useCallback(async (currentOffset: number, replace: boolean) => {
+  const loadPosts = useCallback(async (currentCursor: string | null, replace: boolean) => {
     if (replace) {
       setIsLoading(true)
       setFetchError(null)
@@ -77,10 +66,10 @@ export default function BlindHomeScreen() {
     }
 
     try {
-      const newPosts = await getPosts(currentOffset, LIMIT)
-      setPosts(prev => replace ? newPosts : [...prev, ...newPosts])
-      setOffset(currentOffset + newPosts.length)
-      setHasMore(newPosts.length === LIMIT)
+      const page = await getFeed(currentCursor, LIMIT)
+      setPosts(prev => replace ? page.items : [...prev, ...page.items])
+      setCursor(page.next_cursor)
+      setHasMore(page.next_cursor !== null)
     } catch (err: unknown) {
       const e = err as { detail?: string }
       setFetchError(e.detail ?? '피드를 불러오지 못했습니다.')
@@ -97,7 +86,7 @@ export default function BlindHomeScreen() {
 
   // 초기 로드
   useEffect(() => {
-    loadPosts(0, true)
+    loadPosts(null, true)
   }, [loadPosts])
 
   // 무한 스크롤 — sentinel이 뷰포트에 들어오면 다음 페이지 로드
@@ -107,14 +96,14 @@ export default function BlindHomeScreen() {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && hasMore && !isLoadingMore && !isLoading) {
-          loadPosts(offset, false)
+          loadPosts(cursor, false)
         }
       },
       { threshold: 0.1 },
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [hasMore, isLoadingMore, isLoading, offset, loadPosts])
+  }, [hasMore, isLoadingMore, isLoading, cursor, loadPosts])
 
   const handleDescribeImage = async (postId: string, imageUrl: string) => {
     if (audioState?.postId === postId) {
@@ -128,12 +117,24 @@ export default function BlindHomeScreen() {
     speakText(description, () => setAudioState(null))
   }
 
-  const toggleLike = (id: string) => {
-    setLikedCards((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+  const toggleLike = async (post: Post) => {
+    const wasLiked = post.liked_by_me
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === post.id
+          ? { ...p, liked_by_me: !wasLiked, like_count: p.like_count + (wasLiked ? -1 : 1) }
+          : p,
+      ),
+    )
+    try {
+      const result = wasLiked ? await unlikePost(post.id) : await likePost(post.id)
+      setPosts((prev) =>
+        prev.map((p) => (p.id === post.id ? { ...p, liked_by_me: result.liked, like_count: result.like_count } : p)),
+      )
+    } catch {
+      // 실패 시 낙관적 업데이트 롤백
+      setPosts((prev) => (prev.map((p) => (p.id === post.id ? post : p))))
+    }
   }
 
   if (activeTab === 'chat') {
@@ -149,7 +150,7 @@ export default function BlindHomeScreen() {
       <BlindWriteScreen
         onBack={() => {
           setShowWrite(false)
-          loadPosts(0, true)
+          loadPosts(null, true)
         }}
       />
     )
@@ -200,7 +201,7 @@ export default function BlindHomeScreen() {
           <span className="text-white/50 text-sm">{fetchError}</span>
           <button
             type="button"
-            onClick={() => loadPosts(0, true)}
+            onClick={() => loadPosts(null, true)}
             className="rounded-xl bg-[#1F1F1F] px-5 py-3 text-white text-sm"
           >
             다시 시도
@@ -214,25 +215,31 @@ export default function BlindHomeScreen() {
         <div className={styles.cardScrollArea}>
           <div className={styles.cardScrollInner}>
             {posts.map((post) => {
-              const h = hashId(post.id)
-              const counts = FAKE_COUNTS[h % FAKE_COUNTS.length]
-              const avatarIdx = hashId(String(post.user_id)) % 70 + 1
-              const isMyPost = me && String(post.user_id) === String(me.id)
-              const nickname = isMyPost ? me.nickname : MOCK_NICKNAMES[hashId(String(post.user_id)) % MOCK_NICKNAMES.length]
+              const authorId = post.author.id
+              const avatarIdx = hashId(String(authorId ?? post.id)) % 70 + 1
+              const isMyPost = !!(me && authorId && String(authorId) === String(me.id))
+              const nickname = isMyPost ? me!.nickname : post.author.nickname
+              const image = post.media[0]
               return (
                 <div key={post.id} className={styles.card}>
                   {/* 작성자 정보 */}
                   <div className={styles.cardHeader}>
                     <div className={styles.cardAuthorRow}>
                       <div className={styles.cardAvatarCol}>
-                        {isMyPost ? (
+                        {post.author.profile_image_url ? (
+                          <img
+                            src={resolveImageUrl(post.author.profile_image_url)}
+                            alt={nickname}
+                            className={styles.cardAvatar}
+                          />
+                        ) : isMyPost ? (
                           <div className={`${styles.cardAvatar} bg-[#FFD60A] flex items-center justify-center text-black font-bold text-base`}>
                             {me!.nickname[0].toUpperCase()}
                           </div>
                         ) : (
                           <img
                             src={`https://i.pravatar.cc/80?img=${avatarIdx}`}
-                            alt={`사용자 ${post.user_id}`}
+                            alt={nickname}
                             className={styles.cardAvatar}
                           />
                         )}
@@ -248,17 +255,17 @@ export default function BlindHomeScreen() {
                   <p className={styles.cardBody}>{post.content}</p>
 
                   {/* 첨부 이미지 — 있을 때만 표시 */}
-                  {post.image_url && (
+                  {image && (
                     <div className={styles.cardImageWrapper}>
                       <img
-                        src={resolveImageUrl(post.image_url)}
+                        src={resolveImageUrl(image.url)}
                         alt="첨부 이미지"
                         className={`${styles.cardImage} cursor-pointer`}
-                        onClick={() => setLightboxUrl(resolveImageUrl(post.image_url!))}
+                        onClick={() => setLightboxUrl(resolveImageUrl(image.url))}
                       />
                       <button
                         type="button"
-                        onClick={() => handleDescribeImage(post.id, resolveImageUrl(post.image_url!))}
+                        onClick={() => handleDescribeImage(post.id, resolveImageUrl(image.url))}
                         className={audioState?.postId === post.id ? styles.imageDescribeBtnActive : styles.imageDescribeBtn}
                         aria-label="음성으로 듣기"
                       >
@@ -277,16 +284,16 @@ export default function BlindHomeScreen() {
                   <div className={styles.cardFooter}>
                     <button
                       type="button"
-                      onClick={() => toggleLike(post.id)}
-                      className={likedCards.has(post.id) ? styles.cardFooterLeftActive : styles.cardFooterLeft}
+                      onClick={() => toggleLike(post)}
+                      className={post.liked_by_me ? styles.cardFooterLeftActive : styles.cardFooterLeft}
                     >
                       <img
-                        src={likedCards.has(post.id) ? heartBIcon : heartWIcon}
+                        src={post.liked_by_me ? heartBIcon : heartWIcon}
                         alt="좋아요"
                         className={styles.cardFooterIcon}
                       />
-                      <span className={likedCards.has(post.id) ? styles.cardFooterTextActive : styles.cardFooterText}>
-                        {likedCards.has(post.id) ? counts.likes + 1 : counts.likes}개
+                      <span className={post.liked_by_me ? styles.cardFooterTextActive : styles.cardFooterText}>
+                        {post.like_count}개
                       </span>
                     </button>
                     <button
@@ -295,7 +302,7 @@ export default function BlindHomeScreen() {
                       className={styles.cardFooterRight}
                     >
                       <img src={chatWIcon} alt="댓글" className={styles.cardFooterIcon} />
-                      <span className={styles.cardFooterText}>{counts.comments}개 | 댓글 보기</span>
+                      <span className={styles.cardFooterText}>{post.comment_count}개 | 댓글 보기</span>
                     </button>
                   </div>
                 </div>

@@ -9,7 +9,7 @@ import imageWIcon from '../assets/images/image-w.svg'
 import micWIcon from '../assets/images/mic-w.svg'
 import sendIcon from '../assets/images/send.svg'
 import sendGIcon from '../assets/images/send-g.svg'
-import { uploadImage, createPost } from '../services/posts'
+import { uploadImages, createPost } from '../services/posts'
 import Toast from '../components/Toast'
 
 const CATEGORIES = [
@@ -93,12 +93,12 @@ export default function BlindWriteScreen({ onBack }: Props) {
     setSubmitError(null)
 
     try {
-      let imageUrl: string | null = null
+      let mediaIds: string[] = []
       if (imageFile) {
-        const uploadResult = await uploadImage(imageFile)
-        imageUrl = uploadResult.url
+        const uploaded = await uploadImages([imageFile])
+        mediaIds = uploaded.map((m) => m.media_id)
       }
-      await createPost(content.trim(), imageUrl)
+      await createPost(content.trim(), mediaIds)
       setShowSuccessToast(true)
       setTimeout(onBack, 1500)
     } catch (err: unknown) {

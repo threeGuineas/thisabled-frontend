@@ -1,11 +1,49 @@
 import { authedRequest, IS_MOCK } from './auth'
 
+export interface Author {
+  id: string | null
+  nickname: string
+  profile_image_url: string | null
+}
+
+export interface PostMediaItem {
+  id: string
+  media_type: string
+  url: string
+  sort_order: number
+  description: string | null
+  description_status: string
+  caption: unknown[] | null
+  caption_status: string
+}
+
 export interface Post {
   id: string
-  user_id: string
+  author: Author
   content: string
-  image_url: string | null
+  status: string
+  media: PostMediaItem[]
+  like_count: number
+  comment_count: number
+  liked_by_me: boolean
+  published_at: string | null
   created_at: string
+}
+
+export interface FeedPage {
+  items: Post[]
+  next_cursor: string | null
+}
+
+export interface UploadedMedia {
+  media_id: string
+  url: string
+}
+
+export interface LikeResult {
+  post_id: string
+  liked: boolean
+  like_count: number
 }
 
 // dev: vite proxy가 /api를 백엔드로 전달하므로 상대 경로 사용. prod: 정적 빌드엔 프록시가 없으므로 백엔드 주소 직접 지정.
@@ -28,55 +66,108 @@ const MOCK_IMAGES = [
   'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=400&q=80',
 ]
 
+const MOCK_NICKNAMES = ['달콤한하루', '하늘산책', '달빛여행', '봄바람', '초록잎']
+
+function mockMedia(idx: number): PostMediaItem[] {
+  if (idx % 3 === 2) return []
+  return [{
+    id: crypto.randomUUID(),
+    media_type: 'image',
+    url: MOCK_IMAGES[idx % MOCK_IMAGES.length],
+    sort_order: 0,
+    description: null,
+    description_status: 'idle',
+    caption: null,
+    caption_status: 'idle',
+  }]
+}
+
 const mockPosts = {
-  async upload(_file: File): Promise<{ url: string }> {
+  async uploadImages(files: File[]): Promise<UploadedMedia[]> {
     await sleep(800)
-    return { url: '/uploads/mock-image.jpg' }
+    return files.map(() => ({ media_id: crypto.randomUUID(), url: '/uploads/mock-image.jpg' }))
   },
-  async createPost(content: string, image_url: string | null): Promise<Post> {
+  async createPost(content: string): Promise<Post> {
     await sleep(600)
-    return { id: crypto.randomUUID(), user_id: 'mock-uuid', content, image_url, created_at: new Date().toISOString() }
+    return {
+      id: crypto.randomUUID(),
+      author: { id: 'mock-uuid', nickname: '나', profile_image_url: null },
+      content,
+      status: 'published',
+      media: [],
+      like_count: 0,
+      comment_count: 0,
+      liked_by_me: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    }
   },
-  async getPosts(offset: number, limit: number): Promise<Post[]> {
+  async getFeed(cursor: string | null, limit: number): Promise<FeedPage> {
     await sleep(600)
-    if (offset >= 10) return []
-    return Array.from({ length: Math.min(limit, 5) }, (_, i) => {
-      const idx = offset + i
+    const startOffset = cursor ? Number(cursor) : 0
+    if (startOffset >= 10) return { items: [], next_cursor: null }
+    const items = Array.from({ length: Math.min(limit, 5) }, (_, i) => {
+      const idx = startOffset + i
       return {
         id: crypto.randomUUID(),
-        user_id: `mock-uuid-${(i % 3) + 1}`,
+        author: {
+          id: `mock-uuid-${(i % 3) + 1}`,
+          nickname: MOCK_NICKNAMES[idx % MOCK_NICKNAMES.length],
+          profile_image_url: null,
+        },
         content: MOCK_CONTENTS[idx % MOCK_CONTENTS.length],
-        image_url: idx % 3 !== 2 ? MOCK_IMAGES[idx % MOCK_IMAGES.length] : null,
+        status: 'published',
+        media: mockMedia(idx),
+        like_count: idx % 4,
+        comment_count: idx % 3,
+        liked_by_me: false,
+        published_at: new Date(Date.now() - idx * 3600000).toISOString(),
         created_at: new Date(Date.now() - idx * 3600000).toISOString(),
       }
     })
+    const nextOffset = startOffset + items.length
+    return { items, next_cursor: nextOffset < 10 ? String(nextOffset) : null }
+  },
+  async likePost(postId: string, liked: boolean): Promise<LikeResult> {
+    await sleep(200)
+    return { post_id: postId, liked, like_count: liked ? 1 : 0 }
   },
 }
 
-export async function uploadImage(file: File): Promise<{ url: string }> {
-  if (IS_MOCK) return mockPosts.upload(file)
+export async function uploadImages(files: File[]): Promise<UploadedMedia[]> {
+  if (IS_MOCK) return mockPosts.uploadImages(files)
   const formData = new FormData()
-  formData.append('file', file)
+  for (const file of files) formData.append('files', file)
   // Content-Type은 FormData 사용 시 직접 설정하지 않음 — 브라우저가 multipart/form-data로 자동 설정
-  return authedRequest<{ url: string }>('/api/v1/upload', { method: 'POST', body: formData })
+  const { items } = await authedRequest<{ items: UploadedMedia[] }>('/api/v1/media/images', {
+    method: 'POST',
+    body: formData,
+  })
+  return items
 }
 
-export async function createPost(content: string, imageUrl: string | null): Promise<Post> {
-  if (IS_MOCK) return mockPosts.createPost(content, imageUrl)
+export async function createPost(content: string, mediaIds: string[] = []): Promise<Post> {
+  if (IS_MOCK) return mockPosts.createPost(content)
   return authedRequest<Post>('/api/v1/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content, image_url: imageUrl }),
+    body: JSON.stringify({ content, media_ids: mediaIds }),
   })
 }
 
-export async function getPosts(offset = 0, limit = 20): Promise<Post[]> {
-  if (IS_MOCK) return mockPosts.getPosts(offset, limit)
-  const params = new URLSearchParams({ offset: String(offset), limit: String(limit) })
-  const res = await fetch(`${API_BASE_URL}/api/v1/posts?${params}`)
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw { status: res.status, detail: body.detail ?? '피드를 불러오지 못했습니다.' }
-  }
-  return res.json() as Promise<Post[]>
+export async function getFeed(cursor: string | null = null, limit = 20): Promise<FeedPage> {
+  if (IS_MOCK) return mockPosts.getFeed(cursor, limit)
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (cursor) params.set('cursor', cursor)
+  return authedRequest<FeedPage>(`/api/v1/feed?${params}`)
+}
+
+export async function likePost(postId: string): Promise<LikeResult> {
+  if (IS_MOCK) return mockPosts.likePost(postId, true)
+  return authedRequest<LikeResult>(`/api/v1/posts/${postId}/like`, { method: 'POST' })
+}
+
+export async function unlikePost(postId: string): Promise<LikeResult> {
+  if (IS_MOCK) return mockPosts.likePost(postId, false)
+  return authedRequest<LikeResult>(`/api/v1/posts/${postId}/like`, { method: 'DELETE' })
 }
