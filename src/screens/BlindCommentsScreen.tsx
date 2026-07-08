@@ -1,43 +1,65 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './BlindCommentsScreen.styles'
 import { useVoiceInput } from '../hooks/useVoiceInput'
+import {
+  getComments,
+  createComment,
+  updateComment,
+  deleteComment,
+  API_BASE_URL,
+  type Comment,
+} from '../services/posts'
+import { getMe, type MeProfile } from '../services/users'
 import backGIcon from '../assets/images/back-g.svg'
 import chatIcon from '../assets/images/chat.svg'
 import micWIcon from '../assets/images/mic-w.svg'
 import sendGIcon from '../assets/images/send-g.svg'
 import sendIcon from '../assets/images/send.svg'
 
-const SAMPLE_COMMENTS = [
-  {
-    id: 1,
-    nickname: '하늘산책',
-    time: '10분 전',
-    avatar: 'https://i.pravatar.cc/80?img=11',
-    body: '크루아상 맛집 정보 감사해요! 저도 버터 향 나는 빵 너무 좋아하는데 꼭 가봐야겠어요.',
-  },
-  {
-    id: 2,
-    nickname: '달빛여행',
-    time: '10분 전',
-    avatar: 'https://i.pravatar.cc/80?img=12',
-    body: '사진만 봐도 바삭한 소리가 들리는 것 같아요. 베이커리 이름이 어디예요?',
-  },
-  {
-    id: 3,
-    nickname: '봄바람',
-    time: '10분 전',
-    avatar: 'https://i.pravatar.cc/80?img=13',
-    body: '저도 주말에 동네 빵집 탐방 다니는 게 취미인데, 같이 다녀도 좋을 것 같아요!',
-  },
-]
-
-interface Props {
-  onBack: () => void
+function hashId(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return h
 }
 
-export default function BlindCommentsScreen({ onBack }: Props) {
+function resolveImageUrl(imageUrl: string): string {
+  return imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`
+}
+
+function timeAgo(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '방금 전'
+  if (mins < 60) return `${mins}분 전`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}시간 전`
+  return `${Math.floor(hours / 24)}일 전`
+}
+
+interface Props {
+  postId: string
+  authorNickname: string
+  onBack: () => void
+  onCommentCountChange: (count: number) => void
+}
+
+export default function BlindCommentsScreen({ postId, authorNickname, onBack, onCommentCountChange }: Props) {
+  const [me, setMe] = useState<MeProfile | null>(null)
+
+  const [comments, setComments] = useState<Comment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   const [showSheet, setShowSheet] = useState(false)
+  const [editingComment, setEditingComment] = useState<Comment | null>(null)
   const [commentText, setCommentText] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const onCommentCountChangeRef = useRef(onCommentCountChange)
+  useEffect(() => { onCommentCountChangeRef.current = onCommentCountChange }, [onCommentCountChange])
 
   const { voiceState, voiceError, toggleRecording, stopRecording } = useVoiceInput((text) => {
     setCommentText(prev => prev ? `${prev} ${text}` : text)
@@ -47,9 +69,95 @@ export default function BlindCommentsScreen({ onBack }: Props) {
     window.scrollTo(0, 0)
   }, [])
 
+  useEffect(() => {
+    getMe().then(setMe).catch(() => {})
+  }, [])
+
+  const loadComments = useCallback(async () => {
+    setIsLoading(true)
+    setFetchError(null)
+    try {
+      const page = await getComments(postId)
+      setComments(page.items)
+      onCommentCountChangeRef.current(page.items.length)
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setFetchError(e.detail ?? '댓글을 불러오지 못했습니다.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [postId])
+
+  useEffect(() => {
+    loadComments()
+  }, [loadComments])
+
+  const handleOpenAdd = () => {
+    setEditingComment(null)
+    setCommentText('')
+    setSubmitError(null)
+    setShowSheet(true)
+  }
+
+  const handleOpenEdit = (comment: Comment) => {
+    setEditingComment(comment)
+    setCommentText(comment.content)
+    setSubmitError(null)
+    setShowSheet(true)
+  }
+
   const handleCloseSheet = () => {
     stopRecording()
     setShowSheet(false)
+    setEditingComment(null)
+    setCommentText('')
+    setSubmitError(null)
+  }
+
+  const handleSubmit = async () => {
+    if (!commentText.trim() || isSubmitting) return
+    setIsSubmitting(true)
+    setSubmitError(null)
+    try {
+      if (editingComment) {
+        const updated = await updateComment(editingComment.id, commentText.trim())
+        setComments(prev => prev.map(c => (c.id === updated.id ? updated : c)))
+      } else {
+        const created = await createComment(postId, commentText.trim())
+        setComments(prev => {
+          const next = [...prev, created]
+          onCommentCountChangeRef.current(next.length)
+          return next
+        })
+      }
+      setShowSheet(false)
+      setEditingComment(null)
+      setCommentText('')
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setSubmitError(e.detail ?? (editingComment ? '댓글 수정에 실패했습니다.' : '댓글 등록에 실패했습니다.'))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (comment: Comment) => {
+    if (!window.confirm('댓글을 삭제할까요? 삭제한 댓글은 복구할 수 없어요.')) return
+    setActionError(null)
+    setDeletingId(comment.id)
+    try {
+      await deleteComment(comment.id)
+      setComments(prev => {
+        const next = prev.filter(c => c.id !== comment.id)
+        onCommentCountChangeRef.current(next.length)
+        return next
+      })
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setActionError(e.detail ?? '댓글 삭제에 실패했습니다.')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   const voiceButtonClass =
@@ -74,30 +182,102 @@ export default function BlindCommentsScreen({ onBack }: Props) {
         </button>
         <div className={styles.headerTextGroup}>
           <span className={styles.headerTitle}>
-            댓글 <span className={styles.headerCount}>3개</span>
+            댓글 <span className={styles.headerCount}>{comments.length}개</span>
           </span>
-          <span className={styles.headerSubtitle}>달콤한하루 님의 글</span>
+          <span className={styles.headerSubtitle}>{authorNickname} 님의 글</span>
         </div>
       </div>
 
       <div className={styles.divider} />
 
-      <div className={styles.commentList}>
-        {SAMPLE_COMMENTS.map((comment) => (
-          <div key={comment.id} className={styles.commentItem}>
-            <div className={styles.commentTop}>
-              <img src={comment.avatar} alt={comment.nickname} className={styles.avatar} />
-              <div className={styles.commentMeta}>
-                <span className={styles.nickname}>{comment.nickname}</span>
-                <span className={styles.time}>{comment.time}</span>
-              </div>
-            </div>
-            <p className={styles.commentBody}>{comment.body}</p>
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="flex flex-1 items-center justify-center py-20">
+          <span className="text-white/50 text-sm">댓글을 불러오는 중...</span>
+        </div>
+      ) : fetchError ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-20">
+          <span className="text-white/50 text-sm">{fetchError}</span>
+          <button
+            type="button"
+            onClick={loadComments}
+            className="rounded-xl bg-[#1F1F1F] px-5 py-3 text-white text-sm"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : (
+        <div className={styles.commentList}>
+          {actionError && (
+            <p className="text-red-400 text-xs">{actionError}</p>
+          )}
 
-      <button type="button" onClick={() => setShowSheet(true)} className={styles.floatingButton}>
+          {comments.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center py-20">
+              <span className="text-white/50 text-sm">아직 댓글이 없어요. 첫 댓글을 남겨보세요!</span>
+            </div>
+          ) : (
+            comments.map((comment) => {
+              const authorId = comment.author.id
+              const isMine = !!(me && authorId && String(authorId) === String(me.id))
+              const avatarIdx = hashId(String(authorId ?? comment.id)) % 70 + 1
+
+              return (
+                <div key={comment.id} className={styles.commentItem}>
+                  <div className={styles.commentTop}>
+                    {comment.author.profile_image_url ? (
+                      <img
+                        src={resolveImageUrl(comment.author.profile_image_url)}
+                        alt={comment.author.nickname}
+                        className={styles.avatar}
+                      />
+                    ) : isMine ? (
+                      <div className={`${styles.avatar} bg-[#FFD60A] flex items-center justify-center text-black font-bold text-base`}>
+                        {me!.nickname[0].toUpperCase()}
+                      </div>
+                    ) : (
+                      <img
+                        src={`https://i.pravatar.cc/80?img=${avatarIdx}`}
+                        alt={comment.author.nickname}
+                        className={styles.avatar}
+                      />
+                    )}
+                    <div className={styles.commentMeta}>
+                      <span className={styles.nickname}>{isMine ? me!.nickname : comment.author.nickname}</span>
+                      <span className={styles.time}>{timeAgo(comment.created_at)}</span>
+                    </div>
+                  </div>
+                  <p className={styles.commentBody}>
+                    {comment.content}
+                    {comment.updated_at && <span className={styles.editedTag}>(수정됨)</span>}
+                  </p>
+                  {isMine && (
+                    <div className={styles.commentActions}>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(comment)}
+                        disabled={deletingId === comment.id}
+                        className={styles.commentActionButton}
+                      >
+                        수정
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(comment)}
+                        disabled={deletingId === comment.id}
+                        className={styles.commentActionButtonDanger}
+                      >
+                        {deletingId === comment.id ? '삭제 중...' : '삭제'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
+
+      <button type="button" onClick={handleOpenAdd} className={styles.floatingButton}>
         <img src={chatIcon} alt="댓글 달기" className={styles.chatIcon} />
         <span className={styles.addCommentText}>댓글 달기</span>
       </button>
@@ -110,7 +290,7 @@ export default function BlindCommentsScreen({ onBack }: Props) {
       {/* 바텀시트 */}
       <div className={`${styles.bottomSheet} ${showSheet ? styles.bottomSheetOpen : styles.bottomSheetClosed}`}>
         <div className={styles.sheetHeader}>
-          <span className={styles.sheetTitle}>댓글 달기</span>
+          <span className={styles.sheetTitle}>{editingComment ? '댓글 수정' : '댓글 달기'}</span>
           <button type="button" onClick={handleCloseSheet} className={styles.sheetCancelButton}>
             취소
           </button>
@@ -121,17 +301,22 @@ export default function BlindCommentsScreen({ onBack }: Props) {
           placeholder="댓글을 입력하세요. 아래 마이크로 음성 입력도 가능해요."
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
+          disabled={isSubmitting}
         />
 
         {voiceError && (
           <p className="mt-1 text-xs text-red-400">{voiceError}</p>
         )}
 
+        {submitError && (
+          <p className="mt-1 text-xs text-red-400">{submitError}</p>
+        )}
+
         <div className={styles.sheetFooter}>
           <button
             type="button"
             onClick={toggleRecording}
-            disabled={voiceState === 'transcribing'}
+            disabled={voiceState === 'transcribing' || isSubmitting}
             className={voiceButtonClass}
           >
             <img src={micWIcon} alt="" className={voiceIconClass} />
@@ -139,16 +324,17 @@ export default function BlindCommentsScreen({ onBack }: Props) {
           </button>
           <button
             type="button"
-            disabled={!commentText.trim()}
-            className={commentText.trim() ? styles.submitButtonActive : styles.submitButtonInactive}
+            onClick={handleSubmit}
+            disabled={!commentText.trim() || isSubmitting}
+            className={commentText.trim() && !isSubmitting ? styles.submitButtonActive : styles.submitButtonInactive}
           >
             <img
-              src={commentText.trim() ? sendIcon : sendGIcon}
+              src={commentText.trim() && !isSubmitting ? sendIcon : sendGIcon}
               alt=""
               className={styles.submitIcon}
             />
-            <span className={commentText.trim() ? styles.submitTextActive : styles.submitTextInactive}>
-              댓글 달기
+            <span className={commentText.trim() && !isSubmitting ? styles.submitTextActive : styles.submitTextInactive}>
+              {isSubmitting ? '처리 중...' : editingComment ? '수정 완료' : '댓글 달기'}
             </span>
           </button>
         </div>

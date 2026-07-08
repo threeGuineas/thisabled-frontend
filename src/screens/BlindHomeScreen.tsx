@@ -44,7 +44,7 @@ function timeAgo(isoString: string): string {
 export default function BlindHomeScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [activeFilter, setActiveFilter] = useState('전체')
-  const [showComments, setShowComments] = useState(false)
+  const [activePostId, setActivePostId] = useState<string | null>(null)
   const [showWrite, setShowWrite] = useState(false)
 
   const [me, setMe] = useState<MeProfile | null>(null)
@@ -206,8 +206,19 @@ export default function BlindHomeScreen() {
     )
   }
 
-  if (showComments) {
-    return <BlindCommentsScreen onBack={() => setShowComments(false)} />
+  const activePost = activePostId ? posts.find((p) => p.id === activePostId) ?? null : null
+  if (activePost) {
+    const isActivePostMine = !!(me && activePost.author.id && String(activePost.author.id) === String(me.id))
+    return (
+      <BlindCommentsScreen
+        postId={activePost.id}
+        authorNickname={isActivePostMine ? me!.nickname : activePost.author.nickname}
+        onBack={() => setActivePostId(null)}
+        onCommentCountChange={(count) =>
+          setPosts((prev) => prev.map((p) => (p.id === activePost.id ? { ...p, comment_count: count } : p)))
+        }
+      />
+    )
   }
 
   return (
@@ -348,7 +359,7 @@ export default function BlindHomeScreen() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowComments(true)}
+                      onClick={() => setActivePostId(post.id)}
                       className={styles.cardFooterRight}
                     >
                       <img src={chatWIcon} alt="댓글" className={styles.cardFooterIcon} />

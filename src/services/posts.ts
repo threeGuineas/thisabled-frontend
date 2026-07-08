@@ -48,6 +48,19 @@ export interface LikeResult {
   like_count: number
 }
 
+export interface Comment {
+  id: string
+  post_id: string
+  author: Author
+  content: string
+  created_at: string
+  updated_at: string | null
+}
+
+export interface CommentsPage {
+  items: Comment[]
+}
+
 // dev: vite proxy가 /api를 백엔드로 전달하므로 상대 경로 사용. prod: 정적 빌드엔 프록시가 없으므로 백엔드 주소 직접 지정.
 export const API_BASE_URL = import.meta.env.PROD ? (import.meta.env.VITE_BACKEND_URL as string) : ''
 
@@ -82,6 +95,7 @@ const MOCK_VISION_DESCRIPTIONS = [
 // mock도 동일하게 getPost() 재호출 시점에 processing → done으로 전환되도록 만든다.
 const mockPostStore = new Map<string, Post>()
 const mockDescriptionReadyAt = new Map<string, number>()
+const mockCommentStore = new Map<string, Comment[]>()
 
 function mockDescriptionFor(mediaId: string): string {
   let h = 0
@@ -176,6 +190,46 @@ const mockPosts = {
     if (!post) throw { status: 404, detail: '게시물을 찾을 수 없습니다.' }
     return resolveMockDescriptions(post)
   },
+  async getComments(postId: string): Promise<CommentsPage> {
+    await sleep(400)
+    return { items: mockCommentStore.get(postId) ?? [] }
+  },
+  async createComment(postId: string, content: string): Promise<Comment> {
+    await sleep(400)
+    const comment: Comment = {
+      id: crypto.randomUUID(),
+      post_id: postId,
+      author: { id: 'mock-uuid', nickname: '나', profile_image_url: null },
+      content,
+      created_at: new Date().toISOString(),
+      updated_at: null,
+    }
+    const list = mockCommentStore.get(postId) ?? []
+    list.push(comment)
+    mockCommentStore.set(postId, list)
+    return comment
+  },
+  async updateComment(commentId: string, content: string): Promise<Comment> {
+    await sleep(300)
+    for (const list of mockCommentStore.values()) {
+      const idx = list.findIndex((c) => c.id === commentId)
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], content, updated_at: new Date().toISOString() }
+        return list[idx]
+      }
+    }
+    throw { status: 404, detail: '댓글을 찾을 수 없습니다' }
+  },
+  async deleteComment(commentId: string): Promise<void> {
+    await sleep(300)
+    for (const list of mockCommentStore.values()) {
+      const idx = list.findIndex((c) => c.id === commentId)
+      if (idx !== -1) {
+        list.splice(idx, 1)
+        return
+      }
+    }
+  },
 }
 
 export async function uploadImages(files: File[]): Promise<UploadedMedia[]> {
@@ -220,4 +274,33 @@ export async function likePost(postId: string): Promise<LikeResult> {
 export async function unlikePost(postId: string): Promise<LikeResult> {
   if (IS_MOCK) return mockPosts.likePost(postId, false)
   return authedRequest<LikeResult>(`/api/v1/posts/${postId}/like`, { method: 'DELETE' })
+}
+
+export async function getComments(postId: string): Promise<CommentsPage> {
+  if (IS_MOCK) return mockPosts.getComments(postId)
+  return authedRequest<CommentsPage>(`/api/v1/posts/${postId}/comments`)
+}
+
+export async function createComment(postId: string, content: string): Promise<Comment> {
+  if (IS_MOCK) return mockPosts.createComment(postId, content)
+  return authedRequest<Comment>(`/api/v1/posts/${postId}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  })
+}
+
+// 댓글 작성자 본인만 가능 — 403/404는 호출부에서 detail 메시지로 처리
+export async function updateComment(commentId: string, content: string): Promise<Comment> {
+  if (IS_MOCK) return mockPosts.updateComment(commentId, content)
+  return authedRequest<Comment>(`/api/v1/comments/${commentId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  })
+}
+
+export async function deleteComment(commentId: string): Promise<void> {
+  if (IS_MOCK) return mockPosts.deleteComment(commentId)
+  return authedRequest<void>(`/api/v1/comments/${commentId}`, { method: 'DELETE' })
 }

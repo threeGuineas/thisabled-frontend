@@ -22,6 +22,11 @@ const styles = {
   nickname: ['text-white', typography.sm, typography.semibold].join(' '),
   time: ['text-white/60 mt-0.5', typography.xs, typography.regular].join(' '),
   commentBody: ['text-white leading-relaxed pl-14', typography.sm, typography.regular].join(' '),
+  editedTag: 'text-white/40 ml-1',
+
+  commentActions: 'flex items-center gap-4 pl-14',
+  commentActionButton: ['text-white/50 active:opacity-70 disabled:opacity-40', typography.xs, typography.medium].join(' '),
+  commentActionButtonDanger: ['text-red-400 active:opacity-70 disabled:opacity-40', typography.xs, typography.medium].join(' '),
 
   floatingButton: [
     'fixed bottom-6 left-6 right-6 z-30',
