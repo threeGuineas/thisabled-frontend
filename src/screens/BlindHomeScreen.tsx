@@ -5,9 +5,9 @@ import BlindCommentsScreen from './BlindCommentsScreen'
 import BlindWriteScreen from './BlindWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
-import { getFeed, likePost, unlikePost, type Post, API_BASE_URL } from '../services/posts'
+import { getFeed, getPost, likePost, unlikePost, type Post, type PostMediaItem, API_BASE_URL } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
-import { describeImage, speakText } from '../services/voice'
+import { speakText } from '../services/voice'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
 import heartWIcon from '../assets/images/heart-w.svg'
@@ -16,6 +16,9 @@ import chatWIcon from '../assets/images/chat-w.svg'
 import micWIcon from '../assets/images/mic-w.svg'
 
 const LIMIT = 20
+const DESCRIPTION_FALLBACK_TEXT = '이미지 설명을 아직 준비하지 못했어요.'
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // UUID 문자열을 안정적인 정수 인덱스로 변환 (프로필 이미지 없는 작성자의 임시 아바타용)
 function hashId(id: string): number {
@@ -54,6 +57,7 @@ export default function BlindHomeScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [audioState, setAudioState] = useState<{ postId: string; status: 'loading' | 'speaking' } | null>(null)
+  const describeRequestRef = useRef(0)
 
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -105,16 +109,62 @@ export default function BlindHomeScreen() {
     return () => observer.disconnect()
   }, [hasMore, isLoadingMore, isLoading, cursor, loadPosts])
 
-  const handleDescribeImage = async (postId: string, imageUrl: string) => {
-    if (audioState?.postId === postId) {
+  // 설명 생성 중(processing)일 때 재조회로 상태 변화를 확인 — 전용 폴링 API가 없어 GET /posts/{id}로 대체
+  const pollForDescription = async (
+    postId: string,
+    mediaId: string,
+    token: number,
+  ): Promise<PostMediaItem | null> => {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await sleep(2000)
+      if (describeRequestRef.current !== token) return null
+      try {
+        const updated = await getPost(postId)
+        if (describeRequestRef.current !== token) return null
+        setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)))
+        const media = updated.media.find((m) => m.id === mediaId)
+        if (media && media.description_status !== 'processing') return media
+      } catch {
+        // 일시적 오류는 무시하고 다음 폴링 시도
+      }
+    }
+    return null
+  }
+
+  const handleDescribeImage = async (post: Post, image: PostMediaItem) => {
+    if (audioState?.postId === post.id) {
       window.speechSynthesis.cancel()
+      describeRequestRef.current += 1
       setAudioState(null)
       return
     }
-    setAudioState({ postId, status: 'loading' })
-    const description = await describeImage(imageUrl)
-    setAudioState({ postId, status: 'speaking' })
-    speakText(description, () => setAudioState(null))
+
+    const token = (describeRequestRef.current += 1)
+    window.speechSynthesis.cancel()
+
+    if (image.description_status === 'done' && image.description) {
+      setAudioState({ postId: post.id, status: 'speaking' })
+      speakText(image.description, () => setAudioState(null))
+      return
+    }
+
+    if (image.description_status !== 'processing') {
+      setAudioState({ postId: post.id, status: 'speaking' })
+      speakText(DESCRIPTION_FALLBACK_TEXT, () => setAudioState(null))
+      return
+    }
+
+    setAudioState({ postId: post.id, status: 'loading' })
+    const resolved = await pollForDescription(post.id, image.id, token)
+    if (describeRequestRef.current !== token) return
+
+    setAudioState({ postId: post.id, status: 'speaking' })
+    speakText(
+      resolved?.description_status === 'done' && resolved.description
+        ? resolved.description
+        : DESCRIPTION_FALLBACK_TEXT,
+      () => setAudioState(null),
+    )
   }
 
   const toggleLike = async (post: Post) => {
@@ -265,7 +315,7 @@ export default function BlindHomeScreen() {
                       />
                       <button
                         type="button"
-                        onClick={() => handleDescribeImage(post.id, resolveImageUrl(image.url))}
+                        onClick={() => handleDescribeImage(post, image)}
                         className={audioState?.postId === post.id ? styles.imageDescribeBtnActive : styles.imageDescribeBtn}
                         aria-label="음성으로 듣기"
                       >
