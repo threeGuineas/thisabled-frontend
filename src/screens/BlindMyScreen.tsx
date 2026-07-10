@@ -17,6 +17,7 @@ import { getFriends, getBlocks, unfriend, unblockUser } from '../services/friend
 import type { Author } from '../services/posts'
 import { avatarUrlFor } from '../utils/avatar'
 import { groupByCategory } from '../utils/tags'
+import { applyAccessibilitySettings } from '../utils/accessibility'
 
 const NICKNAME_REGEX = /^[가-힣a-zA-Z0-9]{2,12}$/
 const BIO_MAX_LENGTH = 300
@@ -24,9 +25,8 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const TAG_MAX_COUNT = 10
 
-// 백엔드 ui_mode는 이 3종만 허용한다(§5, 'default' 없음) — 마이페이지 모드 전환은 실제 계정 상태를
-// 반영해야 하므로 온보딩의 '기본화면' 옵션은 여기서 다루지 않는다.
 const MODES = [
+  { id: 'default',       title: '기본화면', desc: '표준 인터페이스' },
   { id: 'visual',        title: '시각장애', desc: '고대비 · 큰 글씨 · 음성 지원' },
   { id: 'hearing',       title: '청각장애', desc: '자막 · 시각 알림' },
   { id: 'developmental', title: '발달장애', desc: '쉬운 말 · 그림 · 큰 버튼' },
@@ -56,7 +56,10 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut }: Props) {
   const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
-    getMe().then(setMe).catch(() => setMeError('프로필을 불러오지 못했어요.'))
+    getMe().then((profile) => {
+      setMe(profile)
+      applyAccessibilitySettings(profile.mode_settings)
+    }).catch(() => setMeError('프로필을 불러오지 못했어요.'))
   }, [])
 
   const handleTabChange = (tab: Tab) => {
@@ -300,7 +303,7 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut }: Props) {
       )}
 
       {/* 모드 전환 바텀시트 */}
-      <div className={`${styles.bottomSheet} ${pendingMode ? styles.bottomSheetOpen : styles.bottomSheetClosed}`}>
+      {pendingMode && <div className={`${styles.bottomSheet} ${styles.bottomSheetOpen}`}>
         <div className={styles.sheetHandle} />
         <span className={styles.sheetTitle}>화면 모드 전환</span>
         <div className={styles.sheetTextGroup}>
@@ -317,7 +320,7 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut }: Props) {
         <button type="button" disabled={modeSaving} onClick={handleModeCancel} className={styles.sheetCancelButton}>
           <span className={styles.sheetCancelText}>취소</span>
         </button>
-      </div>
+      </div>}
 
       <BlindBottomNav active={activeTab} onChange={handleTabChange} />
     </div>
@@ -713,6 +716,10 @@ function FontSettingsView({ me, onSaved, onBack }: FontSettingsViewProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   const previewTextClass =
     fontScale >= 1.25 ? styles.fontPreviewTextLarge
     : fontScale <= 0.9 ? styles.fontPreviewTextSmall
@@ -726,6 +733,7 @@ function FontSettingsView({ me, onSaved, onBack }: FontSettingsViewProps) {
       // mode_settings는 PATCH할 때 전체 교체이므로 기존 값을 펼쳐 다른 키를 보존한다.
       const patch: ModeSettings = { ...me.mode_settings, font_scale: fontScale, high_contrast: highContrast }
       const updated = await updateSettings({ mode_settings: patch })
+      applyAccessibilitySettings(updated.mode_settings)
       onSaved(updated)
     } catch {
       setError('저장 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
@@ -822,6 +830,10 @@ function ContactsManageView({ onBack }: ContactsManageViewProps) {
   const [confirmTarget, setConfirmTarget] = useState<ContactConfirmTarget | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState('')
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   useEffect(() => {
     getFriends()

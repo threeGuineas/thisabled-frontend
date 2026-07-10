@@ -12,6 +12,7 @@ import { getFeed, getPost, likePost, unlikePost, type Post, type Author, type Po
 import { getMe, type MeProfile } from '../services/users'
 import { speakText } from '../services/voice'
 import { avatarUrlFor, resolveImageUrl } from '../utils/avatar'
+import { applyAccessibilitySettings } from '../utils/accessibility'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
 import heartWIcon from '../assets/images/heart-w.svg'
@@ -93,7 +94,10 @@ export default function BlindHomeScreen({ onLoggedOut }: Props) {
 
   // 현재 로그인 유저 정보 로드 (본인 게시물 닉네임 표시용)
   useEffect(() => {
-    getMe().then(setMe).catch(() => {})
+    getMe().then((profile) => {
+      setMe(profile)
+      applyAccessibilitySettings(profile.mode_settings)
+    }).catch(() => {})
   }, [])
 
   // 초기 로드

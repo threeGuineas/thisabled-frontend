@@ -57,7 +57,10 @@ const MOCK_TAG_CATALOG: Tag[] = [
   ...['일상 나누기', '소소한 대화', '마음 나누기', '힐링'].map((label) => ({ code: `daily_${label}`, category: '일상·수다', label })),
 ]
 
-const MOCK_ME_BASE: MeProfile = {
+// mock 모드에서는 백엔드가 없으므로 이 객체가 유일한 저장소 역할을 한다.
+// 이전에는 매 요청마다 이 상수를 스프레드만 하고 실제로 갱신하지 않아, 설정 저장 후
+// 다시 getMe()를 호출하면(예: 마이페이지 재진입) 항상 초기값으로 되돌아가는 버그가 있었다.
+let mockMeState: MeProfile = {
   id: 'mock-uuid',
   nickname: 'testuser',
   bio: null,
@@ -72,28 +75,31 @@ const MOCK_ME_BASE: MeProfile = {
 const mockUsers = {
   async setMode(uiMode: 'visual' | 'hearing' | 'developmental'): Promise<MeProfile> {
     await sleep(300)
-    return { ...MOCK_ME_BASE, ui_mode: uiMode }
+    mockMeState = { ...mockMeState, ui_mode: uiMode }
+    return mockMeState
   },
   async updateMe(patch: UpdateMePayload): Promise<MeProfile> {
     await sleep(400)
-    return {
-      ...MOCK_ME_BASE,
-      nickname: patch.nickname ?? MOCK_ME_BASE.nickname,
-      bio: patch.bio ?? MOCK_ME_BASE.bio,
-      profile_image_url: patch.profile_image_url ?? MOCK_ME_BASE.profile_image_url,
+    mockMeState = {
+      ...mockMeState,
+      nickname: patch.nickname ?? mockMeState.nickname,
+      bio: patch.bio ?? mockMeState.bio,
+      profile_image_url: patch.profile_image_url ?? mockMeState.profile_image_url,
     }
+    return mockMeState
   },
   async updateSettings(patch: UpdateSettingsPayload): Promise<MeProfile> {
     await sleep(400)
-    return {
-      ...MOCK_ME_BASE,
-      stranger_requests_allowed: patch.stranger_requests_allowed ?? MOCK_ME_BASE.stranger_requests_allowed,
-      mode_settings: patch.mode_settings ?? MOCK_ME_BASE.mode_settings,
+    mockMeState = {
+      ...mockMeState,
+      stranger_requests_allowed: patch.stranger_requests_allowed ?? mockMeState.stranger_requests_allowed,
+      mode_settings: patch.mode_settings ?? mockMeState.mode_settings,
     }
+    return mockMeState
   },
   async getMe(): Promise<MeProfile> {
     await sleep(300)
-    return MOCK_ME_BASE
+    return mockMeState
   },
   async getTags(): Promise<{ tags: Tag[] }> {
     await sleep(300)
@@ -101,7 +107,8 @@ const mockUsers = {
   },
   async setTags(tagCodes: string[]): Promise<MeProfile> {
     await sleep(400)
-    return { ...MOCK_ME_BASE, tags: MOCK_TAG_CATALOG.filter((t) => tagCodes.includes(t.code)) }
+    mockMeState = { ...mockMeState, tags: MOCK_TAG_CATALOG.filter((t) => tagCodes.includes(t.code)) }
+    return mockMeState
   },
   async deleteAccount(): Promise<void> {
     await sleep(400)

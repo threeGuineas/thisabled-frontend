@@ -4,6 +4,12 @@ html, body, #root {
   background-color: #000;
 }
 
+/* 고대비 모드: 개별 컴포넌트의 색상 클래스를 일일이 덮어쓰지 않고, 화면 전체에
+   contrast/brightness 필터를 걸어 새로 추가되는 화면에도 자동으로 적용되게 한다. */
+html[data-high-contrast='true'] #root {
+  filter: contrast(1.5) brightness(1.08);
+}
+
 @font-face {
   font-family: 'Pretendard';
   src: url('./assets/fonts/Pretendard-Regular.woff2') format('woff2');
