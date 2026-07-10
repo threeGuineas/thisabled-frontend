@@ -54,7 +54,7 @@ const styles = {
   cardAvatar: 'w-11 h-11 rounded-full object-cover',
   cardTag: ['text-yellow-400 mt-1.5 border border-yellow-400 rounded-full px-3 py-1', typography.xs, typography.semibold].join(' '),
   cardAuthorInfo: 'flex flex-col justify-center pt-0.5',
-  cardNickname: ['text-white', typography.sm, typography.semibold].join(' '),
+  cardNickname: ['text-left text-white', typography.sm, typography.semibold].join(' '),
   cardTime: ['text-white/60', typography.xs, typography.regular].join(' '),
 
   // 본문
