@@ -42,6 +42,7 @@ const styles = {
   myName: ['text-[#FFD60A]', typography.sm, typography.semibold].join(' '),
   otherName: ['text-white', typography.sm, typography.semibold].join(' '),
   messageTime: ['text-[#8A8A8A]', typography.xs, typography.regular].join(' '),
+  readIndicator: ['text-[#FFD60A]', typography.xs, typography.regular].join(' '),
   messageBubble: 'flex items-start gap-3',
   myBar: 'w-1 self-stretch rounded-full bg-[#FFD60A] flex-shrink-0 min-h-[1rem]',
   otherBar: 'w-1 self-stretch rounded-full bg-[#8A8A8A] flex-shrink-0 min-h-[1rem]',

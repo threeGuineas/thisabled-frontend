@@ -2,6 +2,7 @@ import { tokenStorage, IS_MOCK } from './auth'
 
 export type ChatSocketEvent =
   | { type: 'chat.message'; payload: { room_id: string; message_id: string } }
+  | { type: 'chat.read'; payload: { room_id: string; message_id: string } }
   | { type: 'notification'; payload: { type: 'chat.request'; room_id: string; sender_nickname: string } }
   | { type: 'notification'; payload: { type: 'chat.flagged'; room_id: string; message_id: string; retroactive?: boolean } }
   | { type: 'notification'; payload: { type: 'chat.restricted'; room_id: string; sender_id: string; message: string } }

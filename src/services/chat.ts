@@ -13,12 +13,14 @@ export interface ChatRoom {
   counterpart: Author
   requested_by: string | null
   restricted_sender: boolean
+  unread_count: number
   accepted_at: string | null
   created_at: string
 }
 
 export interface ChatRoomPage {
   items: ChatRoom[]
+  unread_total: number
 }
 
 export interface ChatMessage {
@@ -35,6 +37,8 @@ export interface ChatMessage {
   description_status: AsyncMediaStatus
   caption: unknown[] | null
   caption_status: AsyncMediaStatus
+  // mine:true 메시지에서만 의미 있음 — 상대의 마지막 읽음 메시지에만 true (그 이전 메시지는 false)
+  is_read: boolean
   created_at: string
 }
 
@@ -64,6 +68,20 @@ const mockMessagesStore = new Map<string, ChatMessage[]>()
 const mockMediaReadyAt = new Map<string, number>()
 // 블러 메시지의 실제 원문 — content는 reveal 전까지 null로 내려가므로 별도 보관해두었다가 reveal 시 복원한다
 const mockHiddenContent = new Map<string, string>()
+// 방별 "내가 마지막으로 최신 페이지를 조회한 시각" — 이후 도착한 상대 메시지 수가 unread_count가 된다
+const mockMyLastReadAt = new Map<string, string>()
+// 방별 "상대가 읽은 내 마지막 메시지 id" — 문서상 이 메시지에만 is_read:true가 붙는다
+const mockLastReadMessageId = new Map<string, string>()
+
+function computeUnreadCount(roomId: string): number {
+  const lastRead = mockMyLastReadAt.get(roomId) ?? ''
+  return (mockMessagesStore.get(roomId) ?? []).filter((m) => !m.mine && m.created_at > lastRead).length
+}
+
+// 상대가 내가 보낸 메시지를 읽는 상황을 데모용으로 흉내낸다(실제 상대 클라이언트가 없으므로)
+function scheduleMockReadReceipt(roomId: string, messageId: string) {
+  setTimeout(() => mockLastReadMessageId.set(roomId, messageId), 2500)
+}
 
 function findRoomByCounterpart(userId: string): ChatRoom | undefined {
   return [...mockRoomsStore.values()].find((r) => r.counterpart.id === userId)
@@ -85,6 +103,7 @@ function seedIncomingRequest(id: string, nickname: string, content: string, flag
     counterpart: { id, nickname, profile_image_url: null },
     requested_by: id,
     restricted_sender: false,
+    unread_count: 0,
     accepted_at: null,
     created_at: now,
   }
@@ -106,6 +125,7 @@ function seedIncomingRequest(id: string, nickname: string, content: string, flag
       description_status: 'none',
       caption: null,
       caption_status: 'none',
+      is_read: false,
       created_at: now,
     },
   ])
@@ -129,6 +149,7 @@ function ensureSeeded() {
       counterpart: restrictedFriend,
       requested_by: null,
       restricted_sender: true,
+      unread_count: 0,
       accepted_at: now,
       created_at: now,
     }
@@ -146,6 +167,7 @@ function ensureSeeded() {
       counterpart: blurDemoFriend,
       requested_by: null,
       restricted_sender: false,
+      unread_count: 0,
       accepted_at: now,
       created_at: now,
     }
@@ -167,6 +189,7 @@ function ensureSeeded() {
         description_status: 'none',
         caption: null,
         caption_status: 'none',
+        is_read: false,
         created_at: now,
       },
       {
@@ -183,6 +206,7 @@ function ensureSeeded() {
         description_status: 'none',
         caption: null,
         caption_status: 'none',
+        is_read: false,
         created_at: now,
       },
     ])
@@ -210,6 +234,7 @@ const mockChat = {
           counterpart: knownFriend,
           requested_by: null,
           restricted_sender: false,
+          unread_count: 0,
           accepted_at: now,
           created_at: now,
         }
@@ -219,6 +244,7 @@ const mockChat = {
           counterpart: { id: userId, nickname: `상대방${userId.slice(-4)}`, profile_image_url: null },
           requested_by: MOCK_ME_ID,
           restricted_sender: false,
+          unread_count: 0,
           accepted_at: null,
           created_at: now,
         }
@@ -231,16 +257,20 @@ const mockChat = {
     await sleep(400)
     const items = [...mockRoomsStore.values()]
       .filter((r) => r.state === 'active')
+      .map((r) => ({ ...r, unread_count: computeUnreadCount(r.id) }))
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    return { items }
+    const unread_total = items.reduce((sum, r) => sum + r.unread_count, 0)
+    return { items, unread_total }
   },
   async getRequests(): Promise<ChatRoomPage> {
     ensureSeeded()
     await sleep(400)
     const items = [...mockRoomsStore.values()]
       .filter((r) => r.state === 'request' && r.requested_by !== MOCK_ME_ID)
+      .map((r) => ({ ...r, unread_count: computeUnreadCount(r.id) }))
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    return { items }
+    const unread_total = items.reduce((sum, r) => sum + r.unread_count, 0)
+    return { items, unread_total }
   },
   async acceptRequest(roomId: string): Promise<ChatRoom> {
     ensureSeeded()
@@ -276,10 +306,12 @@ const mockChat = {
       description_status: 'none',
       caption: null,
       caption_status: 'none',
+      is_read: false,
       created_at: new Date().toISOString(),
     }
     list.push(message)
     mockMessagesStore.set(roomId, list)
+    scheduleMockReadReceipt(roomId, message.id)
     return message
   },
   async sendMedia(roomId: string, file: File, type: MessageType): Promise<ChatMessage> {
@@ -302,28 +334,35 @@ const mockChat = {
       description_status: type === 'image' ? 'processing' : 'none',
       caption: null,
       caption_status: type === 'video' ? 'processing' : 'none',
+      is_read: false,
       created_at: new Date().toISOString(),
     }
     mockMediaReadyAt.set(message.id, Date.now() + 3000)
     list.push(message)
     mockMessagesStore.set(roomId, list)
+    scheduleMockReadReceipt(roomId, message.id)
     return message
   },
   async getMessages(roomId: string, cursor: string | null, limit: number): Promise<ChatMessagePage> {
     await sleep(400)
     const stored = (mockMessagesStore.get(roomId) ?? []).map((m) => {
       const readyAt = mockMediaReadyAt.get(m.id)
-      if (!readyAt || Date.now() < readyAt) return m
-      mockMediaReadyAt.delete(m.id)
-      return {
-        ...m,
-        description_status: m.description_status === 'processing' ? ('done' as const) : m.description_status,
-        description: m.description_status === 'processing' ? '사진 속 풍경을 담은 이미지입니다.' : m.description,
-        caption_status: m.caption_status === 'processing' ? ('done' as const) : m.caption_status,
-        caption: m.caption_status === 'processing' ? [{ start: 0, end: 3, text: '영상 자막 예시입니다.' }] : m.caption,
-      }
+      const withCaption =
+        !readyAt || Date.now() < readyAt
+          ? m
+          : {
+              ...m,
+              description_status: m.description_status === 'processing' ? ('done' as const) : m.description_status,
+              description: m.description_status === 'processing' ? '사진 속 풍경을 담은 이미지입니다.' : m.description,
+              caption_status: m.caption_status === 'processing' ? ('done' as const) : m.caption_status,
+              caption: m.caption_status === 'processing' ? [{ start: 0, end: 3, text: '영상 자막 예시입니다.' }] : m.caption,
+            }
+      if (readyAt && Date.now() >= readyAt) mockMediaReadyAt.delete(m.id)
+      return { ...withCaption, is_read: m.mine ? m.id === mockLastReadMessageId.get(roomId) : withCaption.is_read }
     })
     mockMessagesStore.set(roomId, stored)
+    // 최신 페이지(cursor 없음) 조회 시점부터를 읽음으로 처리한다(§chat 문서)
+    if (cursor === null) mockMyLastReadAt.set(roomId, new Date().toISOString())
     const desc = [...stored].reverse()
     const offset = cursor ? Number(cursor) : 0
     const items = desc.slice(offset, offset + limit)

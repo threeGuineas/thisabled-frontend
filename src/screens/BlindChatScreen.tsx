@@ -49,14 +49,6 @@ function formatTime(iso: string): string {
   return `${ampm} ${h}:${String(minutes).padStart(2, '0')}`
 }
 
-// 백엔드에 읽음 여부 데이터가 없어 방 id를 기반으로 화면에만 쓰이는 표시용 값을 만든다(실제 읽음 상태 아님).
-function mockReadState(roomId: string): { isRead: boolean; unreadCount: number } {
-  let h = 0
-  for (let i = 0; i < roomId.length; i++) h = (h * 31 + roomId.charCodeAt(i)) >>> 0
-  const isRead = h % 3 !== 0
-  return { isRead, unreadCount: isRead ? 0 : (h % 5) + 1 }
-}
-
 export default function BlindChatScreen({ onTabChange, targetUser, onTargetUserConsumed }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('chat')
   const [listTab, setListTab] = useState<ListTab>('all')
@@ -88,17 +80,10 @@ export default function BlindChatScreen({ onTabChange, targetUser, onTargetUserC
     setRoomsError(null)
     try {
       const page = await getRooms()
-      const withTimes = await Promise.all(
-        page.items.map(async (room): Promise<RoomListItem> => {
-          try {
-            const latest = await getChatMessages(room.id, null, 1)
-            return { ...room, lastMessageAt: latest.items[0]?.created_at ?? room.created_at }
-          } catch {
-            return { ...room, lastMessageAt: room.created_at }
-          }
-        }),
-      )
-      withTimes.sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
+      // 방 목록 조회 자체는 메시지를 읽음 처리하지 않도록 미리보기용 메시지 조회는 하지 않는다(§chat 문서: 최신 페이지 조회 시 읽음 처리됨)
+      const withTimes = page.items
+        .map((room): RoomListItem => ({ ...room, lastMessageAt: room.accepted_at ?? room.created_at }))
+        .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
       setRooms(withTimes)
     } catch (err: unknown) {
       const e = err as { detail?: string }
@@ -308,7 +293,8 @@ export default function BlindChatScreen({ onTabChange, targetUser, onTargetUserC
             {rooms.map((room) => {
               const nickname = room.counterpart.nickname
               const avatarUrl = avatarUrlFor(room.counterpart.profile_image_url, String(room.counterpart.id ?? nickname))
-              const { isRead, unreadCount } = mockReadState(room.id)
+              const isRead = room.unread_count === 0
+              const unreadCount = room.unread_count
               return (
                 <button key={room.id} type="button" className={styles.chatItem} onClick={() => setSelectedRoom(room)}>
                   <div className={styles.avatarWrapper}>

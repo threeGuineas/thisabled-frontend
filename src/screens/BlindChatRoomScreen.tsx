@@ -173,6 +173,11 @@ export default function BlindChatRoomScreen({ room, onBack }: Props) {
             scrollToBottom()
           })
           .catch(() => {})
+      } else if (event.type === 'chat.read' && event.payload.room_id === currentRoom.id) {
+        // 문서상 상대의 마지막 읽음 메시지에만 is_read:true가 붙으므로 그 외 내 메시지는 false로 되돌린다
+        setMessages((prev) =>
+          prev.map((m) => (m.mine ? { ...m, is_read: m.id === event.payload.message_id } : m)),
+        )
       } else if (event.type === 'notification') {
         if (event.payload.type === 'chat.flagged' && event.payload.room_id === currentRoom.id) {
           getChatMessages(currentRoom.id, null, PAGE_LIMIT)
@@ -408,6 +413,7 @@ export default function BlindChatRoomScreen({ room, onBack }: Props) {
                 <span className={msg.mine ? styles.myName : styles.otherName}>
                   {msg.mine ? '나' : nickname}
                 </span>
+                {msg.mine && msg.is_read && <span className={styles.readIndicator}>읽음</span>}
                 <span className={styles.messageTime}>{formatTime(msg.created_at)}</span>
               </div>
               <div className={styles.messageBubble}>
