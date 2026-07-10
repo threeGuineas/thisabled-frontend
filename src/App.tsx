@@ -130,7 +130,7 @@ function App() {
       />
     )
     if (screen === 'interestTags') return <InterestTagsScreen onDone={handleInterestTagsDone} />
-    if (screen === 'blindHome') return <BlindHomeScreen />
+    if (screen === 'blindHome') return <BlindHomeScreen onLoggedOut={() => setScreen('login')} />
     return (
       <LoginScreen
         onLogin={handleLoginSuccess}

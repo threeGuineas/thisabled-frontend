@@ -2,26 +2,12 @@ import { useEffect, useState } from 'react'
 import styles from './InterestTagsScreen.styles'
 import chevronIcon from '../assets/images/next.svg'
 import { getTags, setTags, type Tag } from '../services/users'
+import { groupByCategory } from '../utils/tags'
 
 const INTEREST_MAX_COUNT = 10
 
 interface Props {
   onDone: () => void
-}
-
-interface CategoryGroup {
-  category: string
-  tags: Tag[]
-}
-
-function groupByCategory(tags: Tag[]): CategoryGroup[] {
-  const groups: CategoryGroup[] = []
-  for (const tag of tags) {
-    const group = groups.find((g) => g.category === tag.category)
-    if (group) group.tags.push(tag)
-    else groups.push({ category: tag.category, tags: [tag] })
-  }
-  return groups
 }
 
 export default function InterestTagsScreen({ onDone }: Props) {

@@ -217,7 +217,7 @@ export default function BlindCommentsScreen({ postId, authorNickname, onBack, on
               const avatarUrl = avatarUrlFor(comment.author.profile_image_url, String(authorId ?? comment.id))
               const handleOpenProfile = () => {
                 if (isMine) return
-                openProfile({ id: authorId, nickname, bio: null, avatarUrl })
+                openProfile({ id: authorId, nickname, bio: undefined, avatarUrl })
               }
 
               return (
