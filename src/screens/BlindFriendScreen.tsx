@@ -26,6 +26,7 @@ function avatarFor(author: Author): string {
 
 interface Props {
   onTabChange: (tab: Tab) => void
+  onOpenChat: (friend: Author) => void
 }
 
 type ConfirmAction = 'accept' | 'decline' | 'unfriend' | 'block'
@@ -36,7 +37,7 @@ interface ConfirmTarget {
   action: ConfirmAction
 }
 
-export default function BlindFriendScreen({ onTabChange }: Props) {
+export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('friend')
   const [friendTab, setFriendTab] = useState<FriendTab>('list')
 
@@ -294,7 +295,7 @@ export default function BlindFriendScreen({ onTabChange }: Props) {
                   <div className={styles.friendActions}>
                     <button
                       type="button"
-                      onClick={() => onTabChange('chat')}
+                      onClick={() => onOpenChat(friend)}
                       className={styles.chatButton}
                       aria-label={`${friend.nickname}님과 채팅하기`}
                     >

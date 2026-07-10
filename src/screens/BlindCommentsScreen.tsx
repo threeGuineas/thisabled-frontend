@@ -10,6 +10,7 @@ import {
 } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
 import { useProfileModal } from '../hooks/useProfileModal'
+import type { ProfileModalUser } from '../components/BlindUserProfileModal'
 import { avatarUrlFor } from '../utils/avatar'
 import backGIcon from '../assets/images/back-g.svg'
 import chatIcon from '../assets/images/chat.svg'
@@ -32,7 +33,7 @@ interface Props {
   authorNickname: string
   onBack: () => void
   onCommentCountChange: (count: number) => void
-  onMessage: () => void
+  onMessage: (user: ProfileModalUser) => void
 }
 
 export default function BlindCommentsScreen({ postId, authorNickname, onBack, onCommentCountChange, onMessage }: Props) {

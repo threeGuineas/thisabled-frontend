@@ -30,7 +30,8 @@ export interface BlocksPage {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-const mockFriendsStore: Author[] = [
+// chat.ts 등 다른 mock 서비스가 동일한 인물 정보를 재사용할 수 있도록 export
+export const mockFriendsStore: Author[] = [
   { id: 'mock-friend-1', nickname: '달빛여행', profile_image_url: null },
   { id: 'mock-friend-2', nickname: '하늘산책', profile_image_url: null },
   { id: 'mock-friend-3', nickname: '봄날의소리', profile_image_url: null },
@@ -56,7 +57,8 @@ const mockRequestsStore: FriendRequest[] = [
 ]
 
 const mockSentStore: FriendRequest[] = []
-const mockBlocksStore: Author[] = []
+// chat.ts 등 다른 mock 서비스가 차단 관계를 참조할 수 있도록 export
+export const mockBlocksStore: Author[] = []
 
 const mockFriends = {
   async sendRequest(receiverId: string): Promise<FriendRequest> {

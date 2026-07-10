@@ -7,7 +7,8 @@ import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
 import BlindFriendScreen from './BlindFriendScreen'
 import { useProfileModal } from '../hooks/useProfileModal'
-import { getFeed, getPost, likePost, unlikePost, type Post, type PostMediaItem } from '../services/posts'
+import type { ProfileModalUser } from '../components/BlindUserProfileModal'
+import { getFeed, getPost, likePost, unlikePost, type Post, type Author, type PostMediaItem } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
 import { speakText } from '../services/voice'
 import { avatarUrlFor, resolveImageUrl } from '../utils/avatar'
@@ -41,7 +42,17 @@ export default function BlindHomeScreen() {
 
   const [me, setMe] = useState<MeProfile | null>(null)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
-  const { openProfile, profileModal } = useProfileModal(() => setActiveTab('chat'))
+  const [chatTarget, setChatTarget] = useState<{ id: string; nickname: string; avatarUrl: string } | null>(null)
+
+  const openChatWith = (id: string | null, nickname: string, avatarUrl: string) => {
+    if (!id) return
+    setChatTarget({ id, nickname, avatarUrl })
+    setActiveTab('chat')
+  }
+
+  const { openProfile, profileModal } = useProfileModal((user: ProfileModalUser) =>
+    openChatWith(user.id, user.nickname, user.avatarUrl),
+  )
 
   const [posts, setPosts] = useState<Post[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
@@ -181,11 +192,24 @@ export default function BlindHomeScreen() {
   }
 
   if (activeTab === 'friend') {
-    return <BlindFriendScreen onTabChange={setActiveTab} />
+    return (
+      <BlindFriendScreen
+        onTabChange={setActiveTab}
+        onOpenChat={(friend: Author) =>
+          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url, String(friend.id ?? friend.nickname)))
+        }
+      />
+    )
   }
 
   if (activeTab === 'chat') {
-    return <BlindChatScreen onTabChange={setActiveTab} />
+    return (
+      <BlindChatScreen
+        onTabChange={setActiveTab}
+        targetUser={chatTarget}
+        onTargetUserConsumed={() => setChatTarget(null)}
+      />
+    )
   }
 
   if (activeTab === 'my') {
@@ -214,9 +238,9 @@ export default function BlindHomeScreen() {
         onCommentCountChange={(count) =>
           setPosts((prev) => prev.map((p) => (p.id === activePost.id ? { ...p, comment_count: count } : p)))
         }
-        onMessage={() => {
+        onMessage={(user: ProfileModalUser) => {
           setActivePostId(null)
-          setActiveTab('chat')
+          openChatWith(user.id, user.nickname, user.avatarUrl)
         }}
       />
     )
