@@ -5,7 +5,9 @@ import { sendFriendRequest, blockUser } from '../services/friends'
 export interface ProfileModalUser {
   id: string | null
   nickname: string
-  bio: string | null
+  // null: 자기소개를 비워둔 것으로 확인됨 → "아직 자기소개가 없어요" 표시
+  // undefined: 이 화면에서 자기소개를 조회하지 않음(API 미제공) → 영역 자체를 숨김
+  bio: string | null | undefined
   avatarUrl: string
 }
 
@@ -90,7 +92,7 @@ export default function BlindUserProfileModal({ user, variant = 'add', onClose, 
             <div className={styles.avatarWrapper}>
               <img src={user.avatarUrl} alt={`${user.nickname} 프로필`} className={styles.avatar} />
               <span className={styles.nickname}>{user.nickname}</span>
-              <p className={styles.bio}>{user.bio ?? '아직 자기소개가 없어요.'}</p>
+              {user.bio !== undefined && <p className={styles.bio}>{user.bio ?? '아직 자기소개가 없어요.'}</p>}
             </div>
 
             <div className={styles.actions}>

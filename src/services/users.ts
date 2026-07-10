@@ -14,6 +14,11 @@ export interface UpdateMePayload {
   profile_image_url?: string
 }
 
+export interface UpdateSettingsPayload {
+  stranger_requests_allowed?: boolean
+  mode_settings?: ModeSettings
+}
+
 export interface MeProfile {
   id: string
   nickname: string
@@ -23,7 +28,7 @@ export interface MeProfile {
   is_minor: boolean
   stranger_requests_allowed: boolean
   mode_settings: ModeSettings
-  tags: string[]
+  tags: Tag[]
 }
 
 export interface ModeSettings {
@@ -39,12 +44,6 @@ export interface ModeSettings {
   one_item_feed?: boolean
 }
 
-export interface ModeResponse {
-  mode: DisabilityType
-  settings: ModeSettings
-  changed_at: string
-}
-
 const MOCK_TAG_CATALOG: Tag[] = [
   ...['걷기', '등산', '헬스', '요가', '자전거', '홈트'].map((label) => ({ code: `health_${label}`, category: '운동·건강', label })),
   ...['모바일게임', 'PC게임', '보드게임', '퍼즐'].map((label) => ({ code: `game_${label}`, category: '게임', label })),
@@ -58,64 +57,71 @@ const MOCK_TAG_CATALOG: Tag[] = [
   ...['일상 나누기', '소소한 대화', '마음 나누기', '힐링'].map((label) => ({ code: `daily_${label}`, category: '일상·수다', label })),
 ]
 
+const MOCK_ME_BASE: MeProfile = {
+  id: 'mock-uuid',
+  nickname: 'testuser',
+  bio: null,
+  profile_image_url: null,
+  ui_mode: 'visual',
+  is_minor: false,
+  stranger_requests_allowed: true,
+  mode_settings: {},
+  tags: MOCK_TAG_CATALOG.slice(0, 3),
+}
+
 const mockUsers = {
-  async getMode(): Promise<ModeResponse> {
+  async setMode(uiMode: 'visual' | 'hearing' | 'developmental'): Promise<MeProfile> {
     await sleep(300)
-    return { mode: 'visual', settings: { font_scale: 1.5, high_contrast: true, tts: true, keyboard_nav: true }, changed_at: new Date().toISOString() }
-  },
-  async setMode(mode: DisabilityType): Promise<ModeResponse> {
-    await sleep(300)
-    return { mode, settings: {}, changed_at: new Date().toISOString() }
+    return { ...MOCK_ME_BASE, ui_mode: uiMode }
   },
   async updateMe(patch: UpdateMePayload): Promise<MeProfile> {
     await sleep(400)
     return {
-      id: 'mock-uuid',
-      nickname: patch.nickname ?? 'testuser',
-      bio: patch.bio ?? null,
-      profile_image_url: patch.profile_image_url ?? null,
-      ui_mode: 'visual',
-      is_minor: false,
-      stranger_requests_allowed: true,
-      mode_settings: {},
-      tags: [],
+      ...MOCK_ME_BASE,
+      nickname: patch.nickname ?? MOCK_ME_BASE.nickname,
+      bio: patch.bio ?? MOCK_ME_BASE.bio,
+      profile_image_url: patch.profile_image_url ?? MOCK_ME_BASE.profile_image_url,
+    }
+  },
+  async updateSettings(patch: UpdateSettingsPayload): Promise<MeProfile> {
+    await sleep(400)
+    return {
+      ...MOCK_ME_BASE,
+      stranger_requests_allowed: patch.stranger_requests_allowed ?? MOCK_ME_BASE.stranger_requests_allowed,
+      mode_settings: patch.mode_settings ?? MOCK_ME_BASE.mode_settings,
     }
   },
   async getMe(): Promise<MeProfile> {
     await sleep(300)
-    return {
-      id: 'mock-uuid',
-      nickname: 'testuser',
-      bio: null,
-      profile_image_url: null,
-      ui_mode: 'visual',
-      is_minor: false,
-      stranger_requests_allowed: true,
-      mode_settings: {},
-      tags: [],
-    }
+    return MOCK_ME_BASE
   },
   async getTags(): Promise<{ tags: Tag[] }> {
     await sleep(300)
     return { tags: MOCK_TAG_CATALOG }
   },
-  async setTags(tagCodes: string[]): Promise<{ tags: string[] }> {
+  async setTags(tagCodes: string[]): Promise<MeProfile> {
     await sleep(400)
-    return { tags: tagCodes }
+    return { ...MOCK_ME_BASE, tags: MOCK_TAG_CATALOG.filter((t) => tagCodes.includes(t.code)) }
+  },
+  async deleteAccount(): Promise<void> {
+    await sleep(400)
   },
 }
 
-export function getMode(): Promise<ModeResponse> {
-  if (IS_MOCK) return mockUsers.getMode()
-  return authedRequest<ModeResponse>('/api/v1/users/me/mode')
+// 백엔드 ui_mode는 'visual'|'hearing'|'developmental'만 허용한다('default' 없음, §5).
+// 온보딩 단계에서 로컬 전용 '기본화면(default)'을 고른 경우를 대비해 여기서 보정한다
+// (KakaoSignupScreen의 toSignupUiMode와 동일한 규칙).
+function toApiUiMode(mode: DisabilityType): 'visual' | 'hearing' | 'developmental' {
+  return mode === 'default' ? 'visual' : mode
 }
 
-export function setMode(mode: DisabilityType): Promise<ModeResponse> {
-  if (IS_MOCK) return mockUsers.setMode(mode)
-  return authedRequest<ModeResponse>('/api/v1/users/me/mode', {
+export function setMode(mode: DisabilityType): Promise<MeProfile> {
+  const ui_mode = toApiUiMode(mode)
+  if (IS_MOCK) return mockUsers.setMode(ui_mode)
+  return authedRequest<MeProfile>('/api/v1/users/me/mode', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode }),
+    body: JSON.stringify({ ui_mode }),
   })
 }
 
@@ -141,12 +147,32 @@ export function getTags(): Promise<{ tags: Tag[] }> {
   return request<{ tags: Tag[] }>('/api/v1/tags')
 }
 
-// PUT이므로 매번 전체 교체 — 기존 선택값 + 신규 코드를 합쳐서 보내야 함
-export function setTags(tagCodes: string[]): Promise<{ tags: string[] }> {
+// PUT이므로 매번 전체 교체 — 기존 선택값 + 신규 코드를 합쳐서 보내야 함. 응답은 갱신된 MeOut.
+export function setTags(tagCodes: string[]): Promise<MeProfile> {
   if (IS_MOCK) return mockUsers.setTags(tagCodes)
-  return authedRequest<{ tags: string[] }>('/api/v1/users/me/tags', {
+  return authedRequest<MeProfile>('/api/v1/users/me/tags', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tag_codes: tagCodes }),
+  })
+}
+
+// 둘 다 선택 — 보낸 필드만 갱신되고, mode_settings는 부분 병합이 아니라 통째로 교체된다.
+export function updateSettings(patch: UpdateSettingsPayload): Promise<MeProfile> {
+  if (IS_MOCK) return mockUsers.updateSettings(patch)
+  return authedRequest<MeProfile>('/api/v1/users/me/settings', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
+}
+
+// 회원 탈퇴 — 되돌릴 수 없음. 확인 UI는 호출부(FE) 책임. 성공 시 204(본문 없음).
+export function deleteAccount(postsAction: 'anonymize' | 'delete' = 'anonymize'): Promise<void> {
+  if (IS_MOCK) return mockUsers.deleteAccount()
+  return authedRequest<void>('/api/v1/users/me', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ posts_action: postsAction }),
   })
 }

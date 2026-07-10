@@ -34,7 +34,11 @@ function timeAgo(isoString: string): string {
   return `${Math.floor(hours / 24)}일 전`
 }
 
-export default function BlindHomeScreen() {
+interface Props {
+  onLoggedOut: () => void
+}
+
+export default function BlindHomeScreen({ onLoggedOut }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [activeFilter, setActiveFilter] = useState('전체')
   const [activePostId, setActivePostId] = useState<string | null>(null)
@@ -213,7 +217,7 @@ export default function BlindHomeScreen() {
   }
 
   if (activeTab === 'my') {
-    return <BlindMyScreen onTabChange={setActiveTab} />
+    return <BlindMyScreen onTabChange={setActiveTab} onLoggedOut={onLoggedOut} />
   }
 
   if (showWrite) {
@@ -308,7 +312,7 @@ export default function BlindHomeScreen() {
               const avatarUrl = avatarUrlFor(post.author.profile_image_url, String(authorId ?? post.id))
               const handleOpenProfile = () => {
                 if (isMyPost) return
-                openProfile({ id: authorId, nickname, bio: null, avatarUrl })
+                openProfile({ id: authorId, nickname, bio: undefined, avatarUrl })
               }
               return (
                 <div key={post.id} className={styles.card}>
