@@ -6,25 +6,16 @@ import {
   createComment,
   updateComment,
   deleteComment,
-  API_BASE_URL,
   type Comment,
 } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
+import { useProfileModal } from '../hooks/useProfileModal'
+import { avatarUrlFor } from '../utils/avatar'
 import backGIcon from '../assets/images/back-g.svg'
 import chatIcon from '../assets/images/chat.svg'
 import micWIcon from '../assets/images/mic-w.svg'
 import sendGIcon from '../assets/images/send-g.svg'
 import sendIcon from '../assets/images/send.svg'
-
-function hashId(id: string): number {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return h
-}
-
-function resolveImageUrl(imageUrl: string): string {
-  return imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`
-}
 
 function timeAgo(isoString: string): string {
   const diff = Date.now() - new Date(isoString).getTime()
@@ -41,10 +32,12 @@ interface Props {
   authorNickname: string
   onBack: () => void
   onCommentCountChange: (count: number) => void
+  onMessage: () => void
 }
 
-export default function BlindCommentsScreen({ postId, authorNickname, onBack, onCommentCountChange }: Props) {
+export default function BlindCommentsScreen({ postId, authorNickname, onBack, onCommentCountChange, onMessage }: Props) {
   const [me, setMe] = useState<MeProfile | null>(null)
+  const { openProfile, profileModal } = useProfileModal(onMessage)
 
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -219,32 +212,40 @@ export default function BlindCommentsScreen({ postId, authorNickname, onBack, on
             comments.map((comment) => {
               const authorId = comment.author.id
               const isMine = !!(me && authorId && String(authorId) === String(me.id))
-              const avatarIdx = hashId(String(authorId ?? comment.id)) % 70 + 1
+              const nickname = isMine ? me!.nickname : comment.author.nickname
+              const avatarUrl = avatarUrlFor(comment.author.profile_image_url, String(authorId ?? comment.id))
+              const handleOpenProfile = () => {
+                if (isMine) return
+                openProfile({ id: authorId, nickname, bio: null, avatarUrl })
+              }
 
               return (
                 <div key={comment.id} className={styles.commentItem}>
                   <div className={styles.commentTop}>
-                    {comment.author.profile_image_url ? (
-                      <img
-                        src={resolveImageUrl(comment.author.profile_image_url)}
-                        alt={comment.author.nickname}
-                        className={styles.avatar}
-                      />
-                    ) : isMine ? (
-                      <div className={`${styles.avatar} bg-[#FFD60A] flex items-center justify-center text-black font-bold text-base`}>
-                        {me!.nickname[0].toUpperCase()}
-                      </div>
-                    ) : (
-                      <img
-                        src={`https://i.pravatar.cc/80?img=${avatarIdx}`}
-                        alt={comment.author.nickname}
-                        className={styles.avatar}
-                      />
-                    )}
-                    <div className={styles.commentMeta}>
-                      <span className={styles.nickname}>{isMine ? me!.nickname : comment.author.nickname}</span>
+                    <button
+                      type="button"
+                      onClick={handleOpenProfile}
+                      disabled={isMine}
+                      aria-label={isMine ? undefined : `${nickname}님 프로필 보기`}
+                    >
+                      {!comment.author.profile_image_url && isMine ? (
+                        <div className={`${styles.avatar} bg-[#FFD60A] flex items-center justify-center text-black font-bold text-base`}>
+                          {me!.nickname[0].toUpperCase()}
+                        </div>
+                      ) : (
+                        <img src={avatarUrl} alt="" className={styles.avatar} />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenProfile}
+                      disabled={isMine}
+                      className={styles.commentMeta}
+                      aria-label={isMine ? undefined : `${nickname}님 프로필 보기`}
+                    >
+                      <span className={styles.nickname}>{nickname}</span>
                       <span className={styles.time}>{timeAgo(comment.created_at)}</span>
-                    </div>
+                    </button>
                   </div>
                   <p className={styles.commentBody}>
                     {comment.content}
@@ -339,6 +340,8 @@ export default function BlindCommentsScreen({ postId, authorNickname, onBack, on
           </button>
         </div>
       </div>
+
+      {profileModal}
     </div>
   )
 }

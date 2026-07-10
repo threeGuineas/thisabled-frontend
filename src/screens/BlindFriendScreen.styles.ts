@@ -22,7 +22,7 @@ const styles = {
   recommendAvatar: 'w-16 h-16 rounded-full object-cover',
   recommendNickname: ['w-full text-center truncate text-white', typography.sm, typography.semibold].join(' '),
   recommendBio: ['w-full text-center text-white/60 line-clamp-2', typography.xs, typography.regular].join(' '),
-  recommendAddButton: 'mt-1 w-full flex items-center justify-center gap-1.5 bg-[#FFD60A] rounded-full py-2.5',
+  recommendAddButton: 'mt-1 w-full flex items-center justify-center gap-1.5 bg-[#FFD60A] rounded-full py-2.5 disabled:opacity-40',
   recommendAddIcon: 'w-3.5 h-3.5',
   recommendAddText: ['text-black', typography.xs, typography.bold].join(' '),
 
@@ -30,13 +30,13 @@ const styles = {
   listTitle: ['block px-6 mb-3 text-white', typography.base, typography.bold].join(' '),
   friendList: 'flex flex-col px-4 gap-2',
   friendItem: 'flex items-center gap-3 bg-[#111111] rounded-2xl px-4 py-4 w-full',
+  friendAvatarButton: 'flex-shrink-0',
   friendAvatar: 'w-14 h-14 rounded-full object-cover flex-shrink-0',
   friendInfo: 'flex-1 min-w-0 flex flex-col gap-1',
   friendNickname: ['text-white truncate block', typography.base, typography.semibold].join(' '),
   friendActions: 'flex flex-col items-end gap-1.5 flex-shrink-0',
   chatButton: 'flex items-center gap-1.5 bg-[#FFD60A] rounded-full px-4 py-3 flex-shrink-0',
   chatButtonText: ['text-black', typography.xs, typography.bold].join(' '),
-  unfriendButton: ['text-white/40 active:opacity-70', typography.xs, typography.regular].join(' '),
 
   // 친구 요청
   requestList: 'flex flex-col px-4 gap-3',
