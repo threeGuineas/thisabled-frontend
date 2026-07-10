@@ -1,6 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './BlindChatRoomScreen.styles'
 import { useVoiceInput } from '../hooks/useVoiceInput'
+import {
+  getChatMessages,
+  sendChatMessage,
+  sendChatMedia,
+  revealChatMessage,
+  releaseChatRestriction,
+  type ChatRoom,
+  type ChatMessage,
+} from '../services/chat'
+import { connectChatSocket } from '../services/chatSocket'
+import { blockUser } from '../services/friends'
+import { speakText } from '../services/voice'
+import { avatarUrlFor, resolveImageUrl } from '../utils/avatar'
 import backGIcon from '../assets/images/back-g.svg'
 import callYIcon from '../assets/images/call-y.svg'
 import videoYIcon from '../assets/images/video-y.svg'
@@ -9,67 +22,63 @@ import micWIcon from '../assets/images/mic-w.svg'
 import sendIcon from '../assets/images/send.svg'
 import sendGIcon from '../assets/images/send-g.svg'
 
-interface Message {
-  id: number
-  isMe: boolean
-  content: string
-  time: string
-  image?: string
-}
-
-const INITIAL_MESSAGES: Message[] = [
-  { id: 1, isMe: false, content: '안녕하세요! 오늘 날씨가 정말 좋네요.', time: '오후 2:30' },
-  { id: 2, isMe: true, content: '맞아요! 산책하기 딱 좋은 날씨예요.', time: '오후 2:31' },
-  { id: 3, isMe: false, content: '혹시 이번 주말에 같이 공원 나들이 어떠세요?', time: '오후 2:33' },
-  { id: 4, isMe: true, content: '좋아요! 어느 공원으로 갈까요?', time: '오후 2:34' },
-  {
-    id: 5,
-    isMe: false,
-    content: '근처 올림픽 공원은 어떨까요? 꽃도 많이 피어 있을 것 같아요.',
-    time: '오후 2:36',
-  },
-]
-
-export interface ChatUser {
-  id: number
-  nickname: string
-  avatar: string
-  isActive: boolean
-}
+const PAGE_LIMIT = 30
 
 interface Props {
-  chat: ChatUser
+  room: ChatRoom
   onBack: () => void
 }
 
-function getNowTime() {
-  const now = new Date()
-  const hours = now.getHours()
-  const minutes = now.getMinutes()
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  const hours = d.getHours()
+  const minutes = d.getMinutes()
   const ampm = hours >= 12 ? '오후' : '오전'
   const h = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours
   return `${ampm} ${h}:${String(minutes).padStart(2, '0')}`
 }
 
-export default function BlindChatRoomScreen({ chat, onBack }: Props) {
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
+}
+
+export default function BlindChatRoomScreen({ room, onBack }: Props) {
+  const [currentRoom, setCurrentRoom] = useState<ChatRoom>(room)
+
   const [showChatSheet, setShowChatSheet] = useState(false)
   const [chatText, setChatText] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES)
+
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+
+  const [isSending, setIsSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [isSendingMedia, setIsSendingMedia] = useState(false)
+  const [mediaError, setMediaError] = useState<string | null>(null)
+  const [revealingId, setRevealingId] = useState<string | null>(null)
+  const [isReleasing, setIsReleasing] = useState(false)
+  const [blockTarget, setBlockTarget] = useState<{ id: string; nickname: string } | null>(null)
+  const [isBlocking, setIsBlocking] = useState(false)
+  const [blockError, setBlockError] = useState<string | null>(null)
+
   const messageListRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const prevScrollHeightRef = useRef<number | null>(null)
 
-  useEffect(() => {
-    const el = messageListRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [])
+  const nickname = currentRoom.counterpart.nickname
+  const avatarUrl = avatarUrlFor(currentRoom.counterpart.profile_image_url, String(currentRoom.counterpart.id ?? nickname))
 
-  useEffect(() => {
-    return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview)
-    }
-  }, [imagePreview])
+  // 요청(비친구) 방에서는 내가 요청자일 때만 이 화면을 볼 수 있고, 수락 전에는 1건만 보낼 수 있다
+  const alreadySentInRequest = currentRoom.state === 'request' && messages.some((m) => m.mine)
+  const canSendText = currentRoom.state === 'active' || (currentRoom.state === 'request' && !alreadySentInRequest)
+  const canSendMedia = currentRoom.state === 'active'
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -78,32 +87,189 @@ export default function BlindChatRoomScreen({ chat, onBack }: Props) {
     }, 50)
   }
 
+  const loadInitialMessages = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const page = await getChatMessages(currentRoom.id, null, PAGE_LIMIT)
+      setMessages([...page.items].reverse())
+      setNextCursor(page.next_cursor)
+      setHasMore(page.next_cursor !== null)
+      scrollToBottom()
+    } catch {
+      // 실패 시 빈 목록으로 두고, 아래 재시도 버튼 없이 방을 나갔다 들어오면 재조회됨
+    } finally {
+      setIsLoading(false)
+    }
+  }, [currentRoom.id])
+
+  useEffect(() => {
+    loadInitialMessages()
+  }, [loadInitialMessages])
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview)
+    }
+  }, [imagePreview])
+
+  // 위로 스크롤해 과거 메시지를 더 불러온 뒤에도 보던 위치가 유지되도록 스크롤 높이를 보정
+  useEffect(() => {
+    const el = messageListRef.current
+    if (el && prevScrollHeightRef.current !== null) {
+      el.scrollTop = el.scrollHeight - prevScrollHeightRef.current
+      prevScrollHeightRef.current = null
+    }
+  }, [messages])
+
+  const loadMoreMessages = async () => {
+    if (!hasMore || isLoadingMore || !nextCursor) return
+    setIsLoadingMore(true)
+    prevScrollHeightRef.current = messageListRef.current?.scrollHeight ?? null
+    try {
+      const page = await getChatMessages(currentRoom.id, nextCursor, PAGE_LIMIT)
+      setMessages((prev) => [...[...page.items].reverse(), ...prev])
+      setNextCursor(page.next_cursor)
+      setHasMore(page.next_cursor !== null)
+    } catch {
+      // 실패 시 다음 스크롤에서 재시도
+      prevScrollHeightRef.current = null
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
+
+  const handleScroll = () => {
+    const el = messageListRef.current
+    if (el && el.scrollTop < 80) loadMoreMessages()
+  }
+
+  // 사진 설명(VISION-01)·영상 자막(CAPTION-01)은 완료돼도 WS 알림이 없어 짧은 간격으로 폴링해 반영한다
+  useEffect(() => {
+    const hasProcessing = messages.some(
+      (m) => m.description_status === 'processing' || m.caption_status === 'processing',
+    )
+    if (!hasProcessing) return
+    const timer = setInterval(async () => {
+      try {
+        const page = await getChatMessages(currentRoom.id, null, PAGE_LIMIT)
+        const byId = new Map(page.items.map((m) => [m.id, m]))
+        setMessages((prev) => prev.map((m) => byId.get(m.id) ?? m))
+      } catch {
+        // 일시적 오류는 무시하고 다음 폴링에서 재시도
+      }
+    }, 4000)
+    return () => clearInterval(timer)
+  }, [messages, currentRoom.id])
+
+  // 실시간 알림 — WS 페이로드엔 원문이 실리지 않으므로 이벤트를 받으면 목록을 다시 조회한다
+  useEffect(() => {
+    const socket = connectChatSocket((event) => {
+      if (event.type === 'chat.message' && event.payload.room_id === currentRoom.id) {
+        getChatMessages(currentRoom.id, null, PAGE_LIMIT)
+          .then((page) => {
+            setMessages([...page.items].reverse())
+            setNextCursor(page.next_cursor)
+            setHasMore(page.next_cursor !== null)
+            scrollToBottom()
+          })
+          .catch(() => {})
+      } else if (event.type === 'notification') {
+        if (event.payload.type === 'chat.flagged' && event.payload.room_id === currentRoom.id) {
+          getChatMessages(currentRoom.id, null, PAGE_LIMIT)
+            .then((page) => setMessages([...page.items].reverse()))
+            .catch(() => {})
+        } else if (event.payload.type === 'chat.restricted' && event.payload.room_id === currentRoom.id) {
+          setCurrentRoom((prev) => ({ ...prev, restricted_sender: true }))
+        }
+      }
+    })
+    return () => socket.close()
+  }, [currentRoom.id])
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (imagePreview) URL.revokeObjectURL(imagePreview)
-    const url = URL.createObjectURL(file)
-    setImagePreview(url)
+    setImagePreview(URL.createObjectURL(file))
+    setPendingFile(file)
+    setMediaError(null)
     scrollToBottom()
     setShowConfirmModal(true)
     e.target.value = ''
   }
 
-  const handleConfirmSend = () => {
-    if (!imagePreview) return
-    setMessages((prev) => [
-      ...prev,
-      { id: prev.length + 1, isMe: true, content: '', image: imagePreview, time: getNowTime() },
-    ])
-    setShowConfirmModal(false)
-    setImagePreview(null)
-    scrollToBottom()
+  const handleConfirmSend = async () => {
+    if (!pendingFile || isSendingMedia) return
+    setIsSendingMedia(true)
+    setMediaError(null)
+    try {
+      const message = await sendChatMedia(currentRoom.id, pendingFile, 'image')
+      setMessages((prev) => [...prev, message])
+      setShowConfirmModal(false)
+      if (imagePreview) URL.revokeObjectURL(imagePreview)
+      setImagePreview(null)
+      setPendingFile(null)
+      scrollToBottom()
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setMediaError(e.detail ?? '사진 전송에 실패했습니다.')
+    } finally {
+      setIsSendingMedia(false)
+    }
   }
 
   const handleCancelSend = () => {
     if (imagePreview) URL.revokeObjectURL(imagePreview)
     setImagePreview(null)
+    setPendingFile(null)
+    setMediaError(null)
     setShowConfirmModal(false)
+  }
+
+  const handleReveal = async (message: ChatMessage) => {
+    if (revealingId) return
+    setRevealingId(message.id)
+    try {
+      const result = await revealChatMessage(message.id)
+      setMessages((prev) =>
+        prev.map((m) => (m.id === message.id ? { ...m, blurred: false, content: result.content } : m)),
+      )
+      // 시각 장애 UI: "내용 보기"를 실행하면 원문을 읽어준다
+      speakText(result.content, () => {})
+    } catch {
+      // 실패 시 버튼이 그대로 남아 재시도할 수 있다
+    } finally {
+      setRevealingId(null)
+    }
+  }
+
+  const handleConfirmBlock = async () => {
+    if (!blockTarget || isBlocking) return
+    setIsBlocking(true)
+    setBlockError(null)
+    try {
+      await blockUser(blockTarget.id)
+      setBlockTarget(null)
+      onBack()
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setBlockError(e.detail ?? '차단에 실패했습니다.')
+    } finally {
+      setIsBlocking(false)
+    }
+  }
+
+  const handleReleaseRestriction = async () => {
+    if (isReleasing || !currentRoom.counterpart.id) return
+    setIsReleasing(true)
+    try {
+      await releaseChatRestriction(currentRoom.counterpart.id)
+      setCurrentRoom((prev) => ({ ...prev, restricted_sender: false }))
+    } catch {
+      // 실패 시 배너를 그대로 유지
+    } finally {
+      setIsReleasing(false)
+    }
   }
 
   const { voiceState, voiceError, toggleRecording, stopRecording } = useVoiceInput((text) => {
@@ -112,6 +278,7 @@ export default function BlindChatRoomScreen({ chat, onBack }: Props) {
 
   const handleOpenVoiceSheet = () => {
     setChatText('')
+    setSendError(null)
     setShowChatSheet(true)
     toggleRecording()
   }
@@ -127,6 +294,24 @@ export default function BlindChatRoomScreen({ chat, onBack }: Props) {
       setChatText('')
     }
     toggleRecording()
+  }
+
+  const handleSendText = async () => {
+    if (!chatText.trim() || isSending || !canSendText) return
+    setIsSending(true)
+    setSendError(null)
+    try {
+      const message = await sendChatMessage(currentRoom.id, chatText.trim())
+      setMessages((prev) => [...prev, message])
+      setShowChatSheet(false)
+      setChatText('')
+      scrollToBottom()
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setSendError(e.detail ?? '메시지 전송에 실패했습니다.')
+    } finally {
+      setIsSending(false)
+    }
   }
 
   const sheetVoiceButtonClass =
@@ -156,17 +341,10 @@ export default function BlindChatRoomScreen({ chat, onBack }: Props) {
             <img src={backGIcon} alt="뒤로 가기" className={styles.backIcon} />
           </button>
           <div className={styles.avatarWrapper}>
-            <img src={chat.avatar} alt={`${chat.nickname} 프로필`} className={styles.avatar} />
-            {chat.isActive && <div className={styles.avatarActiveDot} />}
+            <img src={avatarUrl} alt={`${nickname} 프로필`} className={styles.avatar} />
           </div>
           <div className={styles.userInfo}>
-            <span className={styles.userName}>{chat.nickname}</span>
-            {chat.isActive && (
-              <div className={styles.activeRow}>
-                <div className={styles.activeDot} />
-                <span className={styles.activeText}>지금 활동 중</span>
-              </div>
-            )}
+            <span className={styles.userName}>{nickname}</span>
           </div>
         </div>
 
@@ -182,29 +360,112 @@ export default function BlindChatRoomScreen({ chat, onBack }: Props) {
         </div>
       </div>
 
-      <div className={styles.dateDivider}>
-        <span className={styles.dateText}>2026년 6월 24일</span>
-      </div>
+      {currentRoom.restricted_sender && (
+        <div className={styles.restrictionBanner}>
+          <span className={styles.restrictionText}>
+            {nickname}님 — 위험 가능성이 있는 메시지가 반복되어 전송을 제한했어요.
+          </span>
+          <button
+            type="button"
+            onClick={handleReleaseRestriction}
+            disabled={isReleasing}
+            className={styles.restrictionButton}
+          >
+            {isReleasing ? '해제 중...' : '해제하기'}
+          </button>
+        </div>
+      )}
 
-      <div className={styles.messageList} ref={messageListRef}>
-        {messages.map((msg) => (
-          <div key={msg.id} className={styles.messageItem}>
-            <div className={styles.messageMeta}>
-              <span className={msg.isMe ? styles.myName : styles.otherName}>
-                {msg.isMe ? '나' : chat.nickname}
-              </span>
-              <span className={styles.messageTime}>{msg.time}</span>
-            </div>
-            <div className={styles.messageBubble}>
-              <div className={msg.isMe ? styles.myBar : styles.otherBar} />
-              {msg.image ? (
-                <img src={msg.image} alt="전송한 사진" className={styles.messageImage} />
-              ) : (
-                <span className={styles.messageContent}>{msg.content}</span>
-              )}
-            </div>
+      {currentRoom.state === 'request' && (
+        <div className={styles.pendingBanner}>
+          <span className={styles.pendingText}>
+            {alreadySentInRequest ? '상대의 수락을 기다리는 중이에요.' : '상대가 수락하면 계속 대화할 수 있어요.'}
+          </span>
+        </div>
+      )}
+
+      {messages.length > 0 && (
+        <div className={styles.dateDivider}>
+          <span className={styles.dateText}>{formatDate(messages[0].created_at)}</span>
+        </div>
+      )}
+
+      <div className={styles.messageList} ref={messageListRef} onScroll={handleScroll}>
+        {isLoadingMore && (
+          <div className={styles.loadingMoreRow}>
+            <span className={styles.loadingMoreText}>이전 메시지 불러오는 중...</span>
           </div>
-        ))}
+        )}
+
+        {isLoading ? (
+          <div className={styles.loadingMoreRow}>
+            <span className={styles.loadingMoreText}>메시지를 불러오는 중...</span>
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <div key={msg.id} className={styles.messageItem}>
+              <div className={styles.messageMeta}>
+                <span className={msg.mine ? styles.myName : styles.otherName}>
+                  {msg.mine ? '나' : nickname}
+                </span>
+                <span className={styles.messageTime}>{formatTime(msg.created_at)}</span>
+              </div>
+              <div className={styles.messageBubble}>
+                <div className={msg.mine ? styles.myBar : styles.otherBar} />
+                {msg.blurred ? (
+                  <div
+                    className={styles.blurredWrapper}
+                    role="group"
+                    aria-label="주의가 필요한 메시지입니다. 내용 보기를 실행하면 읽어드립니다."
+                  >
+                    <span className={styles.blurredText} aria-hidden="true">
+                      주의가 필요한 메시지입니다.
+                    </span>
+                    <div className={styles.blurredActions}>
+                      <button
+                        type="button"
+                        onClick={() => handleReveal(msg)}
+                        disabled={revealingId === msg.id}
+                        className={styles.revealButton}
+                      >
+                        {revealingId === msg.id ? '확인 중...' : '내용 보기'}
+                      </button>
+                      {msg.sender.id && (
+                        <button
+                          type="button"
+                          onClick={() => setBlockTarget({ id: msg.sender.id!, nickname: msg.sender.nickname })}
+                          className={styles.blockButton}
+                          aria-label={`${msg.sender.nickname}님 차단하기`}
+                        >
+                          차단
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : msg.type === 'image' && msg.media_url ? (
+                  <div className={styles.blurredWrapper}>
+                    <img src={resolveImageUrl(msg.media_url)} alt="전송한 사진" className={styles.messageImage} />
+                    {msg.description_status === 'processing' && (
+                      <span className={styles.messageDescription}>사진 설명을 만드는 중...</span>
+                    )}
+                    {msg.description_status === 'done' && msg.description && (
+                      <span className={styles.messageDescription}>{msg.description}</span>
+                    )}
+                  </div>
+                ) : msg.type === 'video' && msg.media_url ? (
+                  <div className={styles.blurredWrapper}>
+                    <video src={resolveImageUrl(msg.media_url)} controls className={styles.messageVideo} />
+                    {msg.caption_status === 'processing' && (
+                      <span className={styles.messageDescription}>자막을 만드는 중...</span>
+                    )}
+                  </div>
+                ) : (
+                  <span className={styles.messageContent}>{msg.content}</span>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <input
@@ -222,28 +483,59 @@ export default function BlindChatRoomScreen({ chat, onBack }: Props) {
           <div className={styles.confirmModal}>
             <img src={imagePreview} alt="전송할 사진" className={styles.confirmImage} />
             <p className={styles.confirmText}>사진을 전송하시겠습니까?</p>
+            {mediaError && <p className={styles.sheetVoiceError}>{mediaError}</p>}
             <div className={styles.confirmButtons}>
-              <button type="button" onClick={handleCancelSend} className={styles.confirmNoButton}>
+              <button type="button" onClick={handleCancelSend} disabled={isSendingMedia} className={styles.confirmNoButton}>
                 아니오
               </button>
-              <button type="button" onClick={handleConfirmSend} className={styles.confirmYesButton}>
-                네
+              <button type="button" onClick={handleConfirmSend} disabled={isSendingMedia} className={styles.confirmYesButton}>
+                {isSendingMedia ? '전송 중...' : '네'}
               </button>
             </div>
           </div>
         </>
       )}
 
-      <div className={styles.bottomSheet}>
-        <button type="button" className={styles.photoButton} onClick={() => fileInputRef.current?.click()}>
-          <img src={imageWIcon} alt="사진" className={styles.photoIcon} />
-          <span className={styles.photoText}>사진 전송</span>
-        </button>
-        <button type="button" className={styles.voiceButton} onClick={handleOpenVoiceSheet}>
-          <img src={micWIcon} alt="음성 입력" className={styles.voiceIcon} />
-          <span className={styles.voiceText}>음성으로 입력하기</span>
-        </button>
-      </div>
+      {blockTarget && (
+        <>
+          <div className={styles.confirmOverlay} onClick={() => (!isBlocking ? setBlockTarget(null) : undefined)} />
+          <div className={styles.confirmModal}>
+            <p className={styles.confirmText}>{blockTarget.nickname}님을 차단하시겠습니까?</p>
+            {blockError && <p className={styles.sheetVoiceError}>{blockError}</p>}
+            <div className={styles.confirmButtons}>
+              <button type="button" onClick={() => setBlockTarget(null)} disabled={isBlocking} className={styles.confirmNoButton}>
+                아니오
+              </button>
+              <button type="button" onClick={handleConfirmBlock} disabled={isBlocking} className={styles.confirmYesButton}>
+                {isBlocking ? '처리 중...' : '차단하기'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {canSendText ? (
+        <div className={styles.bottomSheet}>
+          <button
+            type="button"
+            className={styles.photoButton}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!canSendMedia}
+            aria-label={canSendMedia ? '사진 전송' : '친구와의 채팅에서만 사진을 보낼 수 있어요'}
+          >
+            <img src={imageWIcon} alt="사진" className={styles.photoIcon} />
+            <span className={styles.photoText}>사진 전송</span>
+          </button>
+          <button type="button" className={styles.voiceButton} onClick={handleOpenVoiceSheet}>
+            <img src={micWIcon} alt="음성 입력" className={styles.voiceIcon} />
+            <span className={styles.voiceText}>음성으로 입력하기</span>
+          </button>
+        </div>
+      ) : (
+        <div className={styles.pendingBannerFixed}>
+          <span className={styles.pendingText}>상대의 수락을 기다리는 중이에요.</span>
+        </div>
+      )}
 
       {showChatSheet && (
         <div className={styles.overlay} onClick={handleCloseSheet} />
@@ -262,17 +554,21 @@ export default function BlindChatRoomScreen({ chat, onBack }: Props) {
           placeholder="음성으로 입력하거나 직접 입력하세요."
           value={chatText}
           onChange={(e) => setChatText(e.target.value)}
+          disabled={isSending}
         />
 
         {voiceError && (
           <p className={styles.sheetVoiceError}>{voiceError}</p>
+        )}
+        {sendError && (
+          <p className={styles.sheetVoiceError}>{sendError}</p>
         )}
 
         <div className={styles.sheetFooter}>
           <button
             type="button"
             onClick={handleReRecord}
-            disabled={voiceState === 'transcribing'}
+            disabled={voiceState === 'transcribing' || isSending}
             className={sheetVoiceButtonClass}
           >
             <img src={micWIcon} alt="" className={sheetVoiceIconClass} />
@@ -280,16 +576,17 @@ export default function BlindChatRoomScreen({ chat, onBack }: Props) {
           </button>
           <button
             type="button"
-            disabled={!chatText.trim()}
-            className={chatText.trim() ? styles.sheetSubmitActive : styles.sheetSubmitInactive}
+            onClick={handleSendText}
+            disabled={!chatText.trim() || isSending}
+            className={chatText.trim() && !isSending ? styles.sheetSubmitActive : styles.sheetSubmitInactive}
           >
             <img
-              src={chatText.trim() ? sendIcon : sendGIcon}
+              src={chatText.trim() && !isSending ? sendIcon : sendGIcon}
               alt=""
               className={styles.sheetSubmitIcon}
             />
-            <span className={chatText.trim() ? styles.sheetSubmitTextActive : styles.sheetSubmitTextInactive}>
-              전송하기
+            <span className={chatText.trim() && !isSending ? styles.sheetSubmitTextActive : styles.sheetSubmitTextInactive}>
+              {isSending ? '전송 중...' : '전송하기'}
             </span>
           </button>
         </div>

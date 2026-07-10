@@ -6,10 +6,12 @@ import BlindWriteScreen from './BlindWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
 import BlindFriendScreen from './BlindFriendScreen'
-import BlindUserProfileModal, { type ProfileModalUser } from '../components/BlindUserProfileModal'
-import { getFeed, getPost, likePost, unlikePost, type Post, type PostMediaItem, API_BASE_URL } from '../services/posts'
+import { useProfileModal } from '../hooks/useProfileModal'
+import type { ProfileModalUser } from '../components/BlindUserProfileModal'
+import { getFeed, getPost, likePost, unlikePost, type Post, type Author, type PostMediaItem } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
 import { speakText } from '../services/voice'
+import { avatarUrlFor, resolveImageUrl } from '../utils/avatar'
 import searchWIcon from '../assets/images/search-w.svg'
 import plusIcon from '../assets/images/plus.svg'
 import heartWIcon from '../assets/images/heart-w.svg'
@@ -21,17 +23,6 @@ const LIMIT = 20
 const DESCRIPTION_FALLBACK_TEXT = '이미지 설명을 아직 준비하지 못했어요.'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-// UUID 문자열을 안정적인 정수 인덱스로 변환 (프로필 이미지 없는 작성자의 임시 아바타용)
-function hashId(id: string): number {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return h
-}
-
-function resolveImageUrl(imageUrl: string): string {
-  return imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`
-}
 
 function timeAgo(isoString: string): string {
   const diff = Date.now() - new Date(isoString).getTime()
@@ -51,7 +42,17 @@ export default function BlindHomeScreen() {
 
   const [me, setMe] = useState<MeProfile | null>(null)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
-  const [profileUser, setProfileUser] = useState<ProfileModalUser | null>(null)
+  const [chatTarget, setChatTarget] = useState<{ id: string; nickname: string; avatarUrl: string } | null>(null)
+
+  const openChatWith = (id: string | null, nickname: string, avatarUrl: string) => {
+    if (!id) return
+    setChatTarget({ id, nickname, avatarUrl })
+    setActiveTab('chat')
+  }
+
+  const { openProfile, profileModal } = useProfileModal((user: ProfileModalUser) =>
+    openChatWith(user.id, user.nickname, user.avatarUrl),
+  )
 
   const [posts, setPosts] = useState<Post[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
@@ -191,11 +192,24 @@ export default function BlindHomeScreen() {
   }
 
   if (activeTab === 'friend') {
-    return <BlindFriendScreen onTabChange={setActiveTab} />
+    return (
+      <BlindFriendScreen
+        onTabChange={setActiveTab}
+        onOpenChat={(friend: Author) =>
+          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url, String(friend.id ?? friend.nickname)))
+        }
+      />
+    )
   }
 
   if (activeTab === 'chat') {
-    return <BlindChatScreen onTabChange={setActiveTab} />
+    return (
+      <BlindChatScreen
+        onTabChange={setActiveTab}
+        targetUser={chatTarget}
+        onTargetUserConsumed={() => setChatTarget(null)}
+      />
+    )
   }
 
   if (activeTab === 'my') {
@@ -224,6 +238,10 @@ export default function BlindHomeScreen() {
         onCommentCountChange={(count) =>
           setPosts((prev) => prev.map((p) => (p.id === activePost.id ? { ...p, comment_count: count } : p)))
         }
+        onMessage={(user: ProfileModalUser) => {
+          setActivePostId(null)
+          openChatWith(user.id, user.nickname, user.avatarUrl)
+        }}
       />
     )
   }
@@ -284,16 +302,13 @@ export default function BlindHomeScreen() {
           <div className={styles.cardScrollInner}>
             {posts.map((post) => {
               const authorId = post.author.id
-              const avatarIdx = hashId(String(authorId ?? post.id)) % 70 + 1
               const isMyPost = !!(me && authorId && String(authorId) === String(me.id))
               const nickname = isMyPost ? me!.nickname : post.author.nickname
               const image = post.media[0]
-              const avatarUrl = post.author.profile_image_url
-                ? resolveImageUrl(post.author.profile_image_url)
-                : `https://i.pravatar.cc/80?img=${avatarIdx}`
-              const openProfile = () => {
+              const avatarUrl = avatarUrlFor(post.author.profile_image_url, String(authorId ?? post.id))
+              const handleOpenProfile = () => {
                 if (isMyPost) return
-                setProfileUser({ id: authorId, nickname, bio: null, avatarUrl })
+                openProfile({ id: authorId, nickname, bio: null, avatarUrl })
               }
               return (
                 <div key={post.id} className={styles.card}>
@@ -302,7 +317,7 @@ export default function BlindHomeScreen() {
                     <div className={styles.cardAuthorRow}>
                       <button
                         type="button"
-                        onClick={openProfile}
+                        onClick={handleOpenProfile}
                         disabled={isMyPost}
                         className={styles.cardAvatarCol}
                         aria-label={isMyPost ? undefined : `${nickname}님 프로필 보기`}
@@ -319,7 +334,7 @@ export default function BlindHomeScreen() {
                           </div>
                         ) : (
                           <img
-                            src={`https://i.pravatar.cc/80?img=${avatarIdx}`}
+                            src={avatarUrl}
                             alt={nickname}
                             className={styles.cardAvatar}
                           />
@@ -328,7 +343,7 @@ export default function BlindHomeScreen() {
                       <div className={styles.cardAuthorInfo}>
                         <button
                           type="button"
-                          onClick={openProfile}
+                          onClick={handleOpenProfile}
                           disabled={isMyPost}
                           className={styles.cardNickname}
                           aria-label={isMyPost ? undefined : `${nickname}님 프로필 보기`}
@@ -414,16 +429,7 @@ export default function BlindHomeScreen() {
       <BlindBottomNav active={activeTab} onChange={setActiveTab} />
 
       {/* 작성자 프로필 팝업 */}
-      {profileUser && (
-        <BlindUserProfileModal
-          user={profileUser}
-          onClose={() => setProfileUser(null)}
-          onMessage={() => {
-            setProfileUser(null)
-            setActiveTab('chat')
-          }}
-        />
-      )}
+      {profileModal}
 
       {/* 이미지 라이트박스 */}
       {lightboxUrl && (

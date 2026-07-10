@@ -7,49 +7,29 @@ import {
   acceptFriendRequest,
   declineFriendRequest,
   unfriend,
+  blockUser,
+  sendFriendRequest,
   type FriendRequest,
 } from '../services/friends'
-import { API_BASE_URL, type Author } from '../services/posts'
+import { getRecommendations, type RecommendedPerson } from '../services/recommendations'
+import { type Author } from '../services/posts'
+import BlindUserProfileModal, { type ProfileModalUser } from '../components/BlindUserProfileModal'
+import { avatarUrlFor } from '../utils/avatar'
 import plusIcon from '../assets/images/plus.svg'
 import searchWIcon from '../assets/images/search-w.svg'
 
 type FriendTab = 'list' | 'request'
 
-// 친구 추천은 아직 백엔드 API가 없어(가이드 미포함) mock 데이터로만 노출한다.
-interface RecommendedPerson {
-  id: number
-  nickname: string
-  avatar: string
-  bio: string
-}
-
-const MOCK_RECOMMENDED: RecommendedPerson[] = [
-  { id: 101, nickname: '초록언덕', avatar: 'https://i.pravatar.cc/80?img=32', bio: '반려견과 매일 산책해요' },
-  { id: 102, nickname: '느린발걸음', avatar: 'https://i.pravatar.cc/80?img=45', bio: '같은 동네에 살아요' },
-  { id: 103, nickname: '따뜻한차', avatar: 'https://i.pravatar.cc/80?img=15', bio: '독서 모임 함께해요' },
-]
-
-function hashId(id: string): number {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return h
-}
-
-function resolveImageUrl(imageUrl: string): string {
-  return imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`
-}
-
 function avatarFor(author: Author): string {
-  if (author.profile_image_url) return resolveImageUrl(author.profile_image_url)
-  const idx = hashId(String(author.id ?? author.nickname)) % 70 + 1
-  return `https://i.pravatar.cc/80?img=${idx}`
+  return avatarUrlFor(author.profile_image_url, String(author.id ?? author.nickname))
 }
 
 interface Props {
   onTabChange: (tab: Tab) => void
+  onOpenChat: (friend: Author) => void
 }
 
-type ConfirmAction = 'accept' | 'decline' | 'unfriend'
+type ConfirmAction = 'accept' | 'decline' | 'unfriend' | 'block'
 
 interface ConfirmTarget {
   id: string
@@ -57,7 +37,7 @@ interface ConfirmTarget {
   action: ConfirmAction
 }
 
-export default function BlindFriendScreen({ onTabChange }: Props) {
+export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('friend')
   const [friendTab, setFriendTab] = useState<FriendTab>('list')
 
@@ -69,9 +49,17 @@ export default function BlindFriendScreen({ onTabChange }: Props) {
   const [isLoadingRequests, setIsLoadingRequests] = useState(true)
   const [requestsError, setRequestsError] = useState<string | null>(null)
 
+  const [recommendations, setRecommendations] = useState<RecommendedPerson[]>([])
+  const [recommendMessage, setRecommendMessage] = useState<string | null>(null)
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true)
+  const [recommendError, setRecommendError] = useState<string | null>(null)
+  const [sentRequestIds, setSentRequestIds] = useState<Set<string>>(new Set())
+
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null)
   const [isConfirming, setIsConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
+
+  const [profileFriend, setProfileFriend] = useState<ProfileModalUser | null>(null)
 
   const loadFriends = useCallback(async () => {
     setIsLoadingFriends(true)
@@ -101,10 +89,40 @@ export default function BlindFriendScreen({ onTabChange }: Props) {
     }
   }, [])
 
+  const loadRecommendations = useCallback(async () => {
+    setIsLoadingRecommendations(true)
+    setRecommendError(null)
+    try {
+      const page = await getRecommendations()
+      setRecommendations(page.items)
+      setRecommendMessage(page.message)
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setRecommendError(e.detail ?? '친구 추천을 불러오지 못했습니다.')
+    } finally {
+      setIsLoadingRecommendations(false)
+    }
+  }, [])
+
   useEffect(() => {
     loadFriends()
     loadRequests()
-  }, [loadFriends, loadRequests])
+    loadRecommendations()
+  }, [loadFriends, loadRequests, loadRecommendations])
+
+  const handleSendRequest = async (personId: string) => {
+    if (sentRequestIds.has(personId)) return
+    setSentRequestIds((prev) => new Set(prev).add(personId))
+    try {
+      await sendFriendRequest(personId)
+    } catch {
+      setSentRequestIds((prev) => {
+        const next = new Set(prev)
+        next.delete(personId)
+        return next
+      })
+    }
+  }
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
@@ -123,6 +141,9 @@ export default function BlindFriendScreen({ onTabChange }: Props) {
       } else if (confirmTarget.action === 'decline') {
         await declineFriendRequest(confirmTarget.id)
         setRequests((prev) => prev.filter((r) => r.id !== confirmTarget.id))
+      } else if (confirmTarget.action === 'block') {
+        await blockUser(confirmTarget.id)
+        setFriends((prev) => prev.filter((f) => f.id !== confirmTarget.id))
       } else {
         await unfriend(confirmTarget.id)
         setFriends((prev) => prev.filter((f) => f.id !== confirmTarget.id))
@@ -178,25 +199,66 @@ export default function BlindFriendScreen({ onTabChange }: Props) {
         <>
           <div className={styles.recommendSection}>
             <span className={styles.recommendTitle}>친구 추천</span>
-            <div className={styles.recommendScrollArea}>
-              <div className={styles.recommendInner}>
-                {MOCK_RECOMMENDED.map((person) => (
-                  <div key={person.id} className={styles.recommendCard}>
-                    <img src={person.avatar} alt={`${person.nickname} 프로필`} className={styles.recommendAvatar} />
-                    <span className={styles.recommendNickname}>{person.nickname}</span>
-                    <span className={styles.recommendBio}>{person.bio}</span>
-                    <button
-                      type="button"
-                      className={styles.recommendAddButton}
-                      aria-label={`${person.nickname}님에게 친구 요청 보내기`}
-                    >
-                      <img src={plusIcon} alt="" className={styles.recommendAddIcon} />
-                      <span className={styles.recommendAddText}>친구 추가</span>
-                    </button>
-                  </div>
-                ))}
+            {isLoadingRecommendations ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyText}>친구 추천을 불러오는 중...</span>
               </div>
-            </div>
+            ) : recommendError ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyText}>{recommendError}</span>
+                <button type="button" onClick={loadRecommendations} className={styles.retryButton}>
+                  다시 시도
+                </button>
+              </div>
+            ) : recommendations.length === 0 ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyText}>
+                  {recommendMessage === '지금은 추천을 만들 수 없어요. 잠시 후 다시 시도해 주세요'
+                    ? recommendMessage
+                    : '관심사를 등록하면 나와 잘 맞는 친구를 추천해드려요.'}
+                </span>
+                {recommendMessage === '지금은 추천을 만들 수 없어요. 잠시 후 다시 시도해 주세요' && (
+                  <button type="button" onClick={loadRecommendations} className={styles.retryButton}>
+                    다시 시도
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className={styles.recommendScrollArea}>
+                <div className={styles.recommendInner}>
+                  {recommendations.map((person) => {
+                    const sent = sentRequestIds.has(person.user_id)
+                    return (
+                      <div key={person.user_id} className={styles.recommendCard}>
+                        <img
+                          src={avatarFor({ id: person.user_id, nickname: person.nickname, profile_image_url: person.profile_image_url })}
+                          alt={`${person.nickname} 프로필`}
+                          className={styles.recommendAvatar}
+                        />
+                        <span className={styles.recommendNickname}>{person.nickname}</span>
+                        <span className={styles.recommendBio}>{person.bio ?? person.reasons[0] ?? ''}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleSendRequest(person.user_id)}
+                          disabled={sent}
+                          className={styles.recommendAddButton}
+                          aria-label={sent ? `${person.nickname}님에게 친구 요청 보냄` : `${person.nickname}님에게 친구 요청 보내기`}
+                        >
+                          {sent ? (
+                            <span className={styles.recommendAddText}>요청됨</span>
+                          ) : (
+                            <>
+                              <img src={plusIcon} alt="" className={styles.recommendAddIcon} />
+                              <span className={styles.recommendAddText}>친구 추가</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <span className={styles.listTitle}>친구 {friends.length}명</span>
@@ -219,29 +281,26 @@ export default function BlindFriendScreen({ onTabChange }: Props) {
             <div className={styles.friendList}>
               {friends.map((friend, i) => (
                 <div key={friend.id ?? i} className={styles.friendItem}>
-                  <img src={avatarFor(friend)} alt={`${friend.nickname} 프로필`} className={styles.friendAvatar} />
+                  <button
+                    type="button"
+                    onClick={() => setProfileFriend({ id: friend.id, nickname: friend.nickname, bio: null, avatarUrl: avatarFor(friend) })}
+                    className={styles.friendAvatarButton}
+                    aria-label={`${friend.nickname}님 프로필 보기`}
+                  >
+                    <img src={avatarFor(friend)} alt="" className={styles.friendAvatar} />
+                  </button>
                   <div className={styles.friendInfo}>
                     <span className={styles.friendNickname}>{friend.nickname}</span>
                   </div>
                   <div className={styles.friendActions}>
                     <button
                       type="button"
-                      onClick={() => onTabChange('chat')}
+                      onClick={() => onOpenChat(friend)}
                       className={styles.chatButton}
                       aria-label={`${friend.nickname}님과 채팅하기`}
                     >
                       <span className={styles.chatButtonText}>채팅하기</span>
                     </button>
-                    {friend.id && (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmTarget({ id: friend.id!, nickname: friend.nickname, action: 'unfriend' })}
-                        className={styles.unfriendButton}
-                        aria-label={`${friend.nickname}님과 친구 끊기`}
-                      >
-                        친구 끊기
-                      </button>
-                    )}
                   </div>
                 </div>
               ))}
@@ -307,6 +366,8 @@ export default function BlindFriendScreen({ onTabChange }: Props) {
             <p className={styles.confirmText}>
               {confirmTarget.action === 'unfriend'
                 ? `${confirmTarget.nickname}님과 친구를 끊으시겠습니까?`
+                : confirmTarget.action === 'block'
+                ? `${confirmTarget.nickname}님을 차단하시겠습니까?`
                 : `${confirmTarget.nickname}님의 친구 요청을 ${confirmTarget.action === 'accept' ? '수락' : '거절'}하시겠습니까?`}
             </p>
             {confirmError && <p className={styles.confirmErrorText}>{confirmError}</p>}
@@ -320,6 +381,24 @@ export default function BlindFriendScreen({ onTabChange }: Props) {
             </div>
           </div>
         </>
+      )}
+
+      {profileFriend && (
+        <BlindUserProfileModal
+          user={profileFriend}
+          variant="friend"
+          onClose={() => setProfileFriend(null)}
+          onUnfriend={() => {
+            const { id, nickname } = profileFriend
+            setProfileFriend(null)
+            if (id) setConfirmTarget({ id, nickname, action: 'unfriend' })
+          }}
+          onBlock={() => {
+            const { id, nickname } = profileFriend
+            setProfileFriend(null)
+            if (id) setConfirmTarget({ id, nickname, action: 'block' })
+          }}
+        />
       )}
 
       <BlindBottomNav active={activeTab} onChange={handleTabChange} />

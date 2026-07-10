@@ -17,18 +17,26 @@ const styles = {
   videoText: ['text-white', typography.sm, typography.medium].join(' '),
   avatarWrapper: 'relative flex-shrink-0',
   avatar: 'w-14 h-14 rounded-full object-cover',
-  avatarActiveDot:
-    'absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#22C55E] border-2 border-black',
   userInfo: 'flex flex-col gap-1',
   userName: ['text-white', typography.xl, typography.bold].join(' '),
-  activeRow: 'flex items-center gap-1.5',
-  activeDot: 'w-2.5 h-2.5 rounded-full bg-[#22C55E] flex-shrink-0',
-  activeText: ['text-[#22C55E]', typography.sm, typography.medium].join(' '),
 
   dateDivider: 'flex items-center justify-center py-2',
   dateText: ['text-[#8A8A8A]', typography.xs, typography.regular].join(' '),
 
-  messageList: 'flex-1 flex flex-col px-6 gap-6 pb-40 overflow-y-auto',
+  loadingMoreRow: 'flex items-center justify-center py-2',
+  loadingMoreText: ['text-white/40', typography.xs, typography.regular].join(' '),
+
+  // 상대의 SAFE-05 전송 제한 해제 배너 (내가 수신자일 때만)
+  restrictionBanner: 'mx-6 mt-4 flex items-center justify-between gap-3 rounded-2xl bg-[#2A1414] px-4 py-3',
+  restrictionText: ['flex-1 text-red-300', typography.xs, typography.regular].join(' '),
+  restrictionButton: ['flex-shrink-0 rounded-full bg-[#FFD60A] px-3 py-2 text-black disabled:opacity-40', typography.xs, typography.bold].join(' '),
+
+  // 요청 방에서 상대 수락 대기 중 배너
+  pendingBanner: 'mx-6 mt-4 rounded-2xl bg-[#1F1F1F] px-4 py-3',
+  pendingBannerFixed: 'fixed left-6 right-6 bottom-6 z-30 rounded-2xl bg-[#1F1F1F] px-4 py-3',
+  pendingText: ['text-white/60 text-center', typography.xs, typography.regular].join(' '),
+
+  messageList: 'flex-1 flex flex-col px-6 gap-6 py-4 pb-40 overflow-y-auto',
   messageItem: 'flex flex-col gap-2',
   messageMeta: 'flex items-center gap-2',
   myName: ['text-[#FFD60A]', typography.sm, typography.semibold].join(' '),
@@ -39,6 +47,14 @@ const styles = {
   otherBar: 'w-1 self-stretch rounded-full bg-[#8A8A8A] flex-shrink-0 min-h-[1rem]',
   messageContent: ['text-white leading-relaxed', typography.base, typography.regular].join(' '),
   messageImage: 'max-w-[70%] rounded-2xl object-contain',
+  messageVideo: 'max-w-[70%] rounded-2xl',
+  messageDescription: ['mt-1 text-white/50 leading-relaxed', typography.xs, typography.regular].join(' '),
+
+  blurredWrapper: 'flex flex-col items-start gap-2',
+  blurredText: ['text-white/50 italic', typography.sm, typography.regular].join(' '),
+  blurredActions: 'flex items-center gap-2',
+  revealButton: ['rounded-full border border-[#FFD60A] px-3 py-1.5 text-[#FFD60A] disabled:opacity-40', typography.xs, typography.semibold].join(' '),
+  blockButton: ['rounded-full border border-red-400 px-3 py-1.5 text-red-400 disabled:opacity-40', typography.xs, typography.semibold].join(' '),
 
   imagePreviewWrapper: 'relative mx-6 mb-2',
   imagePreview: 'w-full rounded-2xl object-contain',
