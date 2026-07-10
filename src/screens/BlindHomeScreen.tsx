@@ -5,6 +5,8 @@ import BlindCommentsScreen from './BlindCommentsScreen'
 import BlindWriteScreen from './BlindWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
+import BlindFriendScreen from './BlindFriendScreen'
+import BlindUserProfileModal, { type ProfileModalUser } from '../components/BlindUserProfileModal'
 import { getFeed, getPost, likePost, unlikePost, type Post, type PostMediaItem, API_BASE_URL } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
 import { speakText } from '../services/voice'
@@ -49,6 +51,7 @@ export default function BlindHomeScreen() {
 
   const [me, setMe] = useState<MeProfile | null>(null)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [profileUser, setProfileUser] = useState<ProfileModalUser | null>(null)
 
   const [posts, setPosts] = useState<Post[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
@@ -187,6 +190,10 @@ export default function BlindHomeScreen() {
     }
   }
 
+  if (activeTab === 'friend') {
+    return <BlindFriendScreen onTabChange={setActiveTab} />
+  }
+
   if (activeTab === 'chat') {
     return <BlindChatScreen onTabChange={setActiveTab} />
   }
@@ -281,12 +288,25 @@ export default function BlindHomeScreen() {
               const isMyPost = !!(me && authorId && String(authorId) === String(me.id))
               const nickname = isMyPost ? me!.nickname : post.author.nickname
               const image = post.media[0]
+              const avatarUrl = post.author.profile_image_url
+                ? resolveImageUrl(post.author.profile_image_url)
+                : `https://i.pravatar.cc/80?img=${avatarIdx}`
+              const openProfile = () => {
+                if (isMyPost) return
+                setProfileUser({ id: authorId, nickname, bio: null, avatarUrl })
+              }
               return (
                 <div key={post.id} className={styles.card}>
                   {/* 작성자 정보 */}
                   <div className={styles.cardHeader}>
                     <div className={styles.cardAuthorRow}>
-                      <div className={styles.cardAvatarCol}>
+                      <button
+                        type="button"
+                        onClick={openProfile}
+                        disabled={isMyPost}
+                        className={styles.cardAvatarCol}
+                        aria-label={isMyPost ? undefined : `${nickname}님 프로필 보기`}
+                      >
                         {post.author.profile_image_url ? (
                           <img
                             src={resolveImageUrl(post.author.profile_image_url)}
@@ -304,9 +324,17 @@ export default function BlindHomeScreen() {
                             className={styles.cardAvatar}
                           />
                         )}
-                      </div>
+                      </button>
                       <div className={styles.cardAuthorInfo}>
-                        <span className={styles.cardNickname}>{nickname}</span>
+                        <button
+                          type="button"
+                          onClick={openProfile}
+                          disabled={isMyPost}
+                          className={styles.cardNickname}
+                          aria-label={isMyPost ? undefined : `${nickname}님 프로필 보기`}
+                        >
+                          {nickname}
+                        </button>
                         <span className={styles.cardTime}>{timeAgo(post.created_at)}</span>
                       </div>
                     </div>
@@ -384,6 +412,18 @@ export default function BlindHomeScreen() {
       )}
 
       <BlindBottomNav active={activeTab} onChange={setActiveTab} />
+
+      {/* 작성자 프로필 팝업 */}
+      {profileUser && (
+        <BlindUserProfileModal
+          user={profileUser}
+          onClose={() => setProfileUser(null)}
+          onMessage={() => {
+            setProfileUser(null)
+            setActiveTab('chat')
+          }}
+        />
+      )}
 
       {/* 이미지 라이트박스 */}
       {lightboxUrl && (
