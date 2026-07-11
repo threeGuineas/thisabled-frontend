@@ -25,6 +25,11 @@ function vibrate(pattern: number | number[]) {
   navigator.vibrate?.(pattern)
 }
 
+// 무음이 이 시간(ms) 이상 지속되면 자동으로 녹음을 종료한다.
+const SILENCE_DURATION_MS = 4000
+// AnalyserNode의 RMS 볼륨(0~1)이 이 값 미만이면 무음으로 판단한다.
+const SILENCE_RMS_THRESHOLD = 0.02
+
 export function useVoiceInput(onResult: (text: string) => void) {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle')
   const [voiceError, setVoiceError] = useState<string | null>(null)
@@ -35,15 +40,85 @@ export function useVoiceInput(onResult: (text: string) => void) {
   const onResultRef = useRef(onResult)
   useEffect(() => { onResultRef.current = onResult }, [onResult])
 
-  useEffect(() => () => {
-    recorderRef.current?.stop()
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    window.speechSynthesis?.cancel()
-  }, [])
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const silenceRafRef = useRef<number | null>(null)
+  const silenceStartRef = useRef<number | null>(null)
+  const hasSpokenRef = useRef(false)
 
   const stopRecording = useCallback(() => {
     recorderRef.current?.stop()
   }, [])
+
+  const stopSilenceDetection = useCallback(() => {
+    if (silenceRafRef.current !== null) {
+      cancelAnimationFrame(silenceRafRef.current)
+      silenceRafRef.current = null
+    }
+    analyserRef.current = null
+    silenceStartRef.current = null
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {})
+      audioContextRef.current = null
+    }
+  }, [])
+
+  const monitorSilence = useCallback(() => {
+    const analyser = analyserRef.current
+    if (!analyser) return
+
+    const data = new Uint8Array(analyser.fftSize)
+    analyser.getByteTimeDomainData(data)
+    let sumSquares = 0
+    for (let i = 0; i < data.length; i++) {
+      const normalized = (data[i] - 128) / 128
+      sumSquares += normalized * normalized
+    }
+    const rms = Math.sqrt(sumSquares / data.length)
+
+    const now = performance.now()
+    if (rms > SILENCE_RMS_THRESHOLD) {
+      hasSpokenRef.current = true
+      silenceStartRef.current = null
+    } else if (hasSpokenRef.current) {
+      // 안내 음성 직후 사용자가 말을 시작하기 전까지는 무음으로 잘리지 않도록,
+      // 한 번이라도 발화가 감지된 뒤부터만 무음 타이머를 센다.
+      if (silenceStartRef.current === null) {
+        silenceStartRef.current = now
+      } else if (now - silenceStartRef.current >= SILENCE_DURATION_MS) {
+        stopRecording()
+        return
+      }
+    }
+    silenceRafRef.current = requestAnimationFrame(monitorSilence)
+  }, [stopRecording])
+
+  const startSilenceDetection = useCallback((stream: MediaStream) => {
+    try {
+      const AudioContextCtor = window.AudioContext ?? (window as any).webkitAudioContext
+      const audioContext = new AudioContextCtor()
+      const source = audioContext.createMediaStreamSource(stream)
+      const analyser = audioContext.createAnalyser()
+      analyser.fftSize = 2048
+      source.connect(analyser)
+
+      audioContextRef.current = audioContext
+      analyserRef.current = analyser
+      silenceStartRef.current = null
+      hasSpokenRef.current = false
+      monitorSilence()
+    } catch (e) {
+      // 무음 감지가 불가능해도 녹음 자체는 계속 진행하고, 수동 종료로 폴백한다.
+      console.error('[voice] silence detection unavailable', e)
+    }
+  }, [monitorSilence])
+
+  useEffect(() => () => {
+    recorderRef.current?.stop()
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    stopSilenceDetection()
+    window.speechSynthesis?.cancel()
+  }, [stopSilenceDetection])
 
   const startRecording = useCallback(async () => {
     setVoiceError(null)
@@ -86,6 +161,7 @@ export function useVoiceInput(onResult: (text: string) => void) {
     }
 
     recorder.onstop = async () => {
+      stopSilenceDetection()
       stream.getTracks().forEach(t => t.stop())
       const blob = new Blob(chunksRef.current, { type: mimeType })
       chunksRef.current = []
@@ -110,7 +186,8 @@ export function useVoiceInput(onResult: (text: string) => void) {
     }
 
     recorder.start()
-  }, [])
+    startSilenceDetection(stream)
+  }, [startSilenceDetection])
 
   const toggleRecording = useCallback(() => {
     if (voiceState === 'recording') {

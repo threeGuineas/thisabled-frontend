@@ -18,7 +18,7 @@ const styles = {
   commentItem: 'flex flex-col gap-2',
   commentTop: 'flex items-start gap-3',
   avatar: 'w-11 h-11 rounded-full object-cover flex-shrink-0',
-  commentMeta: 'flex flex-col justify-center pt-0.5',
+  commentMeta: 'flex flex-col justify-center items-start text-left pt-0.5',
   nickname: ['text-white', typography.sm, typography.semibold].join(' '),
   time: ['text-white/60 mt-0.5', typography.xs, typography.regular].join(' '),
   commentBody: ['text-white leading-relaxed pl-14', typography.sm, typography.regular].join(' '),
