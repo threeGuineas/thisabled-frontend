@@ -6,6 +6,7 @@ import {
   getFriendRequests,
   acceptFriendRequest,
   declineFriendRequest,
+  cancelFriendRequest,
   unfriend,
   blockUser,
   sendFriendRequest,
@@ -29,7 +30,8 @@ interface Props {
   onOpenChat: (friend: Author) => void
 }
 
-type ConfirmAction = 'accept' | 'decline' | 'unfriend' | 'block'
+type ConfirmAction = 'accept' | 'decline' | 'cancel' | 'unfriend' | 'block'
+type RequestBox = 'received' | 'sent'
 
 interface ConfirmTarget {
   id: string
@@ -45,9 +47,15 @@ export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
   const [isLoadingFriends, setIsLoadingFriends] = useState(true)
   const [friendsError, setFriendsError] = useState<string | null>(null)
 
+  const [requestBox, setRequestBox] = useState<RequestBox>('received')
+
   const [requests, setRequests] = useState<FriendRequest[]>([])
   const [isLoadingRequests, setIsLoadingRequests] = useState(true)
   const [requestsError, setRequestsError] = useState<string | null>(null)
+
+  const [sentRequests, setSentRequests] = useState<FriendRequest[]>([])
+  const [isLoadingSentRequests, setIsLoadingSentRequests] = useState(true)
+  const [sentRequestsError, setSentRequestsError] = useState<string | null>(null)
 
   const [recommendations, setRecommendations] = useState<RecommendedPerson[]>([])
   const [recommendMessage, setRecommendMessage] = useState<string | null>(null)
@@ -89,6 +97,20 @@ export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
     }
   }, [])
 
+  const loadSentRequests = useCallback(async () => {
+    setIsLoadingSentRequests(true)
+    setSentRequestsError(null)
+    try {
+      const page = await getFriendRequests('sent')
+      setSentRequests(page.items)
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setSentRequestsError(e.detail ?? '보낸 친구 요청을 불러오지 못했습니다.')
+    } finally {
+      setIsLoadingSentRequests(false)
+    }
+  }, [])
+
   const loadRecommendations = useCallback(async () => {
     setIsLoadingRecommendations(true)
     setRecommendError(null)
@@ -107,14 +129,16 @@ export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
   useEffect(() => {
     loadFriends()
     loadRequests()
+    loadSentRequests()
     loadRecommendations()
-  }, [loadFriends, loadRequests, loadRecommendations])
+  }, [loadFriends, loadRequests, loadSentRequests, loadRecommendations])
 
   const handleSendRequest = async (personId: string) => {
     if (sentRequestIds.has(personId)) return
     setSentRequestIds((prev) => new Set(prev).add(personId))
     try {
-      await sendFriendRequest(personId)
+      const request = await sendFriendRequest(personId)
+      setSentRequests((prev) => [request, ...prev])
     } catch {
       setSentRequestIds((prev) => {
         const next = new Set(prev)
@@ -141,6 +165,9 @@ export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
       } else if (confirmTarget.action === 'decline') {
         await declineFriendRequest(confirmTarget.id)
         setRequests((prev) => prev.filter((r) => r.id !== confirmTarget.id))
+      } else if (confirmTarget.action === 'cancel') {
+        await cancelFriendRequest(confirmTarget.id)
+        setSentRequests((prev) => prev.filter((r) => r.id !== confirmTarget.id))
       } else if (confirmTarget.action === 'block') {
         await blockUser(confirmTarget.id)
         setFriends((prev) => prev.filter((f) => f.id !== confirmTarget.id))
@@ -307,56 +334,127 @@ export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
             </div>
           )}
         </>
-      ) : isLoadingRequests ? (
-        <div className={styles.emptyState}>
-          <span className={styles.emptyText}>친구 요청을 불러오는 중...</span>
-        </div>
-      ) : requestsError ? (
-        <div className={styles.emptyState}>
-          <span className={styles.emptyText}>{requestsError}</span>
-          <button type="button" onClick={loadRequests} className={styles.retryButton}>
-            다시 시도
-          </button>
-        </div>
-      ) : requests.length === 0 ? (
-        <div className={styles.emptyState}>
-          <span className={styles.emptyText}>받은 친구 요청이 없어요.</span>
-        </div>
       ) : (
-        <div className={styles.requestList}>
-          {requests.map((request) => (
-            <div key={request.id} className={styles.requestItem}>
-              <div className={styles.requestTop}>
-                <img
-                  src={avatarFor(request.sender)}
-                  alt={`${request.sender.nickname} 프로필`}
-                  className={styles.friendAvatar}
-                />
-                <div className={styles.friendInfo}>
-                  <span className={styles.friendNickname}>{request.sender.nickname}</span>
-                </div>
+        <>
+          <div className={styles.requestBoxRow} role="tablist" aria-label="받은 요청과 보낸 요청 전환">
+            {/* axe-linter-disable-next-line aria-valid-attr-value */}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={requestBox === 'received'}
+              onClick={() => setRequestBox('received')}
+              className={requestBox === 'received' ? styles.requestBoxButtonActive : styles.requestBoxButtonInactive}
+            >
+              받은 요청 {requests.length}
+            </button>
+            {/* axe-linter-disable-next-line aria-valid-attr-value */}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={requestBox === 'sent'}
+              onClick={() => setRequestBox('sent')}
+              className={requestBox === 'sent' ? styles.requestBoxButtonActive : styles.requestBoxButtonInactive}
+            >
+              보낸 요청 {sentRequests.length}
+            </button>
+          </div>
+
+          {requestBox === 'received' ? (
+            isLoadingRequests ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyText}>친구 요청을 불러오는 중...</span>
               </div>
-              <div className={styles.requestActions}>
-                <button
-                  type="button"
-                  onClick={() => setConfirmTarget({ id: request.id, nickname: request.sender.nickname, action: 'accept' })}
-                  className={styles.acceptButton}
-                  aria-label={`${request.sender.nickname}님의 친구 요청 수락`}
-                >
-                  수락
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmTarget({ id: request.id, nickname: request.sender.nickname, action: 'decline' })}
-                  className={styles.declineButton}
-                  aria-label={`${request.sender.nickname}님의 친구 요청 거절`}
-                >
-                  거절
+            ) : requestsError ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyText}>{requestsError}</span>
+                <button type="button" onClick={loadRequests} className={styles.retryButton}>
+                  다시 시도
                 </button>
               </div>
+            ) : requests.length === 0 ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyText}>받은 친구 요청이 없어요.</span>
+              </div>
+            ) : (
+              <div className={styles.requestList}>
+                {requests.map((request) => (
+                  <div key={request.id} className={styles.requestItem}>
+                    <div className={styles.requestTop}>
+                      <img
+                        src={avatarFor(request.sender)}
+                        alt={`${request.sender.nickname} 프로필`}
+                        className={styles.friendAvatar}
+                      />
+                      <div className={styles.friendInfo}>
+                        <span className={styles.friendNickname}>{request.sender.nickname}</span>
+                      </div>
+                    </div>
+                    <div className={styles.requestActions}>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmTarget({ id: request.id, nickname: request.sender.nickname, action: 'accept' })}
+                        className={styles.acceptButton}
+                        aria-label={`${request.sender.nickname}님의 친구 요청 수락`}
+                      >
+                        수락
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmTarget({ id: request.id, nickname: request.sender.nickname, action: 'decline' })}
+                        className={styles.declineButton}
+                        aria-label={`${request.sender.nickname}님의 친구 요청 거절`}
+                      >
+                        거절
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : isLoadingSentRequests ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyText}>보낸 친구 요청을 불러오는 중...</span>
             </div>
-          ))}
-        </div>
+          ) : sentRequestsError ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyText}>{sentRequestsError}</span>
+              <button type="button" onClick={loadSentRequests} className={styles.retryButton}>
+                다시 시도
+              </button>
+            </div>
+          ) : sentRequests.length === 0 ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyText}>보낸 친구 요청이 없어요.</span>
+            </div>
+          ) : (
+            <div className={styles.requestList}>
+              {sentRequests.map((request) => (
+                <div key={request.id} className={styles.requestItem}>
+                  <div className={styles.requestTop}>
+                    <img
+                      src={avatarFor(request.receiver)}
+                      alt={`${request.receiver.nickname} 프로필`}
+                      className={styles.friendAvatar}
+                    />
+                    <div className={styles.friendInfo}>
+                      <span className={styles.friendNickname}>{request.receiver.nickname}</span>
+                    </div>
+                  </div>
+                  <div className={styles.requestActions}>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmTarget({ id: request.id, nickname: request.receiver.nickname, action: 'cancel' })}
+                      className={styles.cancelButton}
+                      aria-label={`${request.receiver.nickname}님에게 보낸 친구 요청 취소`}
+                    >
+                      요청 취소
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {confirmTarget && (
@@ -368,6 +466,8 @@ export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
                 ? `${confirmTarget.nickname}님과 친구를 끊으시겠습니까?`
                 : confirmTarget.action === 'block'
                 ? `${confirmTarget.nickname}님을 차단하시겠습니까?`
+                : confirmTarget.action === 'cancel'
+                ? `${confirmTarget.nickname}님에게 보낸 친구 요청을 취소하시겠습니까?`
                 : `${confirmTarget.nickname}님의 친구 요청을 ${confirmTarget.action === 'accept' ? '수락' : '거절'}하시겠습니까?`}
             </p>
             {confirmError && <p className={styles.confirmErrorText}>{confirmError}</p>}

@@ -39,12 +39,16 @@ const styles = {
   chatButtonText: ['text-black', typography.xs, typography.bold].join(' '),
 
   // 친구 요청
+  requestBoxRow: 'flex mx-6 mb-4 bg-[#111111] rounded-2xl p-1.5 gap-1',
+  requestBoxButtonActive: ['flex-1 rounded-xl py-2.5 text-center bg-[#FFD60A] text-black', typography.sm, typography.bold].join(' '),
+  requestBoxButtonInactive: ['flex-1 rounded-xl py-2.5 text-center text-white/50', typography.sm, typography.semibold].join(' '),
   requestList: 'flex flex-col px-4 gap-3',
   requestItem: 'flex flex-col gap-3 bg-[#111111] rounded-2xl px-4 py-4 w-full',
   requestTop: 'flex items-center gap-3',
   requestActions: 'flex gap-2',
   acceptButton: ['flex-1 bg-[#FFD60A] rounded-xl py-3 text-center text-black', typography.sm, typography.bold].join(' '),
   declineButton: ['flex-1 border border-[#FFD60A] rounded-xl py-3 text-center text-[#FFD60A]', typography.sm, typography.semibold].join(' '),
+  cancelButton: ['w-full border border-[#FFD60A] rounded-xl py-3 text-center text-[#FFD60A]', typography.sm, typography.semibold].join(' '),
 
   emptyState: 'flex flex-1 flex-col items-center justify-center gap-4 py-20 px-6',
   emptyText: ['text-white/50 text-center', typography.sm, typography.regular].join(' '),
