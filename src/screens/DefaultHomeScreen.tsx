@@ -5,12 +5,12 @@ import DefaultPostDetailScreen from './DefaultPostDetailScreen'
 import DefaultWriteScreen from './DefaultWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
-import BlindFriendScreen from './BlindFriendScreen'
+import DefaultFriendScreen from './DefaultFriendScreen'
 import { useProfileModal } from '../hooks/useProfileModal'
 import type { ProfileModalUser } from '../components/BlindUserProfileModal'
-import { getFeed, likePost, unlikePost, type Post, type Author } from '../services/posts'
+import { getFeed, likePost, unlikePost, type Post } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
-import { avatarUrlFor, resolveImageUrl } from '../utils/avatar'
+import { resolveImageUrl } from '../utils/avatar'
 import { FILTERS, categoryFor } from '../utils/category'
 import searchIcon from '../assets/images/search.svg'
 import writeIcon from '../assets/images/write.svg'
@@ -128,14 +128,7 @@ export default function DefaultHomeScreen({ onLoggedOut }: Props) {
   }
 
   if (activeTab === 'friend') {
-    return (
-      <BlindFriendScreen
-        onTabChange={setActiveTab}
-        onOpenChat={(friend: Author) =>
-          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url, String(friend.id ?? friend.nickname)))
-        }
-      />
-    )
+    return <DefaultFriendScreen onTabChange={setActiveTab} />
   }
 
   if (activeTab === 'chat') {
