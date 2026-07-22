@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './DefaultHomeScreen.styles'
 import BottomNav, { type Tab } from '../components/BottomNav'
 import DefaultPostDetailScreen from './DefaultPostDetailScreen'
-import BlindWriteScreen from './BlindWriteScreen'
+import DefaultWriteScreen from './DefaultWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
 import BlindFriendScreen from './BlindFriendScreen'
@@ -49,8 +49,9 @@ export default function DefaultHomeScreen({ onLoggedOut }: Props) {
     setActiveTab('chat')
   }
 
-  const { profileModal } = useProfileModal((user: ProfileModalUser) =>
-    openChatWith(user.id, user.nickname, user.avatarUrl),
+  const { profileModal } = useProfileModal(
+    (user: ProfileModalUser) => openChatWith(user.id, user.nickname, user.avatarUrl),
+    'default',
   )
 
   const [posts, setPosts] = useState<Post[]>([])
@@ -153,7 +154,7 @@ export default function DefaultHomeScreen({ onLoggedOut }: Props) {
 
   if (showWrite) {
     return (
-      <BlindWriteScreen
+      <DefaultWriteScreen
         onBack={() => {
           setShowWrite(false)
           loadPosts(null, true)

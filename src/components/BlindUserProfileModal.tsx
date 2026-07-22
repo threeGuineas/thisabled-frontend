@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import styles from './BlindUserProfileModal.styles'
+import allStyles from './BlindUserProfileModal.styles'
 import { sendFriendRequest, blockUser } from '../services/friends'
 
 export interface ProfileModalUser {
@@ -14,13 +14,15 @@ export interface ProfileModalUser {
 interface Props {
   user: ProfileModalUser
   variant?: 'add' | 'friend'
+  theme?: 'blind' | 'default'
   onClose: () => void
   onMessage?: () => void
   onUnfriend?: () => void
   onBlock?: () => void
 }
 
-export default function BlindUserProfileModal({ user, variant = 'add', onClose, onMessage, onUnfriend, onBlock }: Props) {
+export default function BlindUserProfileModal({ user, variant = 'add', theme = 'blind', onClose, onMessage, onUnfriend, onBlock }: Props) {
+  const styles = allStyles[theme]
   const [requestSent, setRequestSent] = useState(false)
   const [isSendingRequest, setIsSendingRequest] = useState(false)
   const [requestError, setRequestError] = useState<string | null>(null)
