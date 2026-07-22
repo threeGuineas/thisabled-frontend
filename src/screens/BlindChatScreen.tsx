@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './BlindChatScreen.styles'
-import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
+import BottomNav, { type Tab } from '../components/BottomNav'
 import BlindChatRoomScreen from './BlindChatRoomScreen'
 import {
   createOrGetRoom,
@@ -436,7 +436,7 @@ export default function BlindChatScreen({ onTabChange, targetUser, onTargetUserC
         </>
       )}
 
-      <BlindBottomNav active={activeTab} onChange={handleTabChange} />
+      <BottomNav variant="blind" active={activeTab} onChange={handleTabChange} />
     </div>
   )
 }

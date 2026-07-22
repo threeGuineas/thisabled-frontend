@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import styles from './BlindFriendScreen.styles'
-import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
+import BottomNav, { type Tab } from '../components/BottomNav'
 import {
   getFriends,
   getFriendRequests,
@@ -501,7 +501,7 @@ export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
         />
       )}
 
-      <BlindBottomNav active={activeTab} onChange={handleTabChange} />
+      <BottomNav variant="blind" active={activeTab} onChange={handleTabChange} />
     </div>
   )
 }

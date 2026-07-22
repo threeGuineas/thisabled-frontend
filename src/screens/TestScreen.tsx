@@ -30,7 +30,7 @@ export default function TestScreen({ onGoLogin, onGoKakaoSignup, onGoOnboarding,
         { label: '시각장애 홈', sub: 'BlindHomeScreen', onClick: () => onGoHome('visual'), color: 'black' },
         { label: '청각장애 홈', sub: '미구현', onClick: () => onGoHome('hearing'), color: 'gray' },
         { label: '발달장애 홈', sub: '미구현', onClick: () => onGoHome('developmental'), color: 'gray' },
-        { label: '기본 홈', sub: '미구현', onClick: () => onGoHome('default'), color: 'gray' },
+        { label: '기본 홈', sub: 'DefaultHomeScreen', onClick: () => onGoHome('default'), color: 'black' },
       ],
     },
   ]

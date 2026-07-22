@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './BlindHomeScreen.styles'
-import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
+import BottomNav, { type Tab } from '../components/BottomNav'
 import BlindCommentsScreen from './BlindCommentsScreen'
 import BlindWriteScreen from './BlindWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
@@ -434,7 +434,7 @@ export default function BlindHomeScreen({ onLoggedOut }: Props) {
         </div>
       )}
 
-      <BlindBottomNav active={activeTab} onChange={setActiveTab} />
+      <BottomNav variant="blind" active={activeTab} onChange={setActiveTab} />
 
       {/* 작성자 프로필 팝업 */}
       {profileModal}

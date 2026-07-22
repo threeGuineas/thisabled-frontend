@@ -4,12 +4,15 @@ import LoginScreen from './screens/LoginScreen'
 import KakaoSignupScreen from './screens/KakaoSignupScreen'
 import InterestTagsScreen from './screens/InterestTagsScreen'
 import BlindHomeScreen from './screens/BlindHomeScreen'
+import DefaultHomeScreen from './screens/DefaultHomeScreen'
 import TestScreen from './screens/TestScreen'
 import Toast from './components/Toast'
 import { type DisabilityType, tokenStorage } from './services/auth'
 import { setMode } from './services/users'
 
-type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome'
+type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome' | 'defaultHome'
+
+const homeScreenFor = (mode: DisabilityType): Screen => (mode === 'default' ? 'defaultHome' : 'blindHome')
 
 // 'existingUser': 로그인 후 모드 미설정 → 선택 즉시 PUT /users/me/mode 호출
 // 'newSignup': 카카오 신규가입 전 모드 선택 → KakaoSignupScreen으로 전달, 가입 시 함께 제출
@@ -55,7 +58,7 @@ function App() {
 
     try {
       await setMode(mode)
-      showToast('환경 설정이 완료되었습니다.', () => setScreen('blindHome'))
+      showToast('환경 설정이 완료되었습니다.', () => setScreen(homeScreenFor(mode)))
     } catch {
       showToast('오류가 발생했습니다. 다시 로그인해주세요.', () => setScreen('login'))
     }
@@ -66,7 +69,7 @@ function App() {
   }
 
   const handleInterestTagsDone = () => {
-    showToast('회원가입이 완료되었습니다.', () => setScreen('blindHome'))
+    showToast('회원가입이 완료되었습니다.', () => setScreen(homeScreenFor(signupUiMode)))
   }
 
   // 카카오 콜백: 백엔드가 {FRONTEND_URL}?is_new_user=...&signup_token=... 로 리다이렉트한 경우 처리
@@ -116,7 +119,7 @@ function App() {
         onGoLogin={() => setScreen('login')}
         onGoKakaoSignup={() => { setSignupToken('mock-signup-token'); setOnboardingContext('newSignup'); setScreen('onboarding') }}
         onGoOnboarding={() => { setOnboardingContext('existingUser'); setScreen('onboarding') }}
-        onGoHome={handleLoginSuccess}
+        onGoHome={(mode) => setScreen(homeScreenFor(mode))}
       />
     )
     if (screen === 'onboarding') return <OnboardingScreen onNext={handleOnboardingNext} />
@@ -131,6 +134,7 @@ function App() {
     )
     if (screen === 'interestTags') return <InterestTagsScreen onDone={handleInterestTagsDone} />
     if (screen === 'blindHome') return <BlindHomeScreen onLoggedOut={() => setScreen('login')} />
+    if (screen === 'defaultHome') return <DefaultHomeScreen onLoggedOut={() => setScreen('login')} />
     return (
       <LoginScreen
         onLogin={handleLoginSuccess}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import styles from './BlindMyScreen.styles'
-import BlindBottomNav, { type Tab } from '../components/BlindBottomNav'
+import BottomNav, { type Tab } from '../components/BottomNav'
 import modeIcon from '../assets/images/mode.svg'
 import checkYIcon from '../assets/images/check-y.svg'
 import eyeIcon from '../assets/images/eye-w.svg'
@@ -322,7 +322,7 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut }: Props) {
         </button>
       </div>}
 
-      <BlindBottomNav active={activeTab} onChange={handleTabChange} />
+      <BottomNav variant="blind" active={activeTab} onChange={handleTabChange} />
     </div>
   )
 }
