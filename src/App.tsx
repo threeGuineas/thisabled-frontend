@@ -64,6 +64,12 @@ function App() {
     }
   }
 
+  // 마이페이지의 화면 모드 전환 — 서버엔 이미 PUT /users/me/mode가 반영된 뒤 호출되므로
+  // 여기서는 알맞은 화면 구성(BlindHomeScreen/DefaultHomeScreen)으로 갈아타기만 하면 된다.
+  const handleModeChanged = (mode: DisabilityType) => {
+    showToast('화면 모드가 변경되었습니다.', () => setScreen(homeScreenFor(mode)))
+  }
+
   const handleKakaoSignupSuccess = () => {
     setScreen('interestTags')
   }
@@ -133,8 +139,8 @@ function App() {
       />
     )
     if (screen === 'interestTags') return <InterestTagsScreen onDone={handleInterestTagsDone} />
-    if (screen === 'blindHome') return <BlindHomeScreen onLoggedOut={() => setScreen('login')} />
-    if (screen === 'defaultHome') return <DefaultHomeScreen onLoggedOut={() => setScreen('login')} />
+    if (screen === 'blindHome') return <BlindHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
+    if (screen === 'defaultHome') return <DefaultHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
     return (
       <LoginScreen
         onLogin={handleLoginSuccess}

@@ -10,6 +10,7 @@ import { useProfileModal } from '../hooks/useProfileModal'
 import type { ProfileModalUser } from '../components/BlindUserProfileModal'
 import { getFeed, getPost, likePost, unlikePost, type Post, type Author, type PostMediaItem } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
+import { type DisabilityType } from '../services/auth'
 import { speakText } from '../services/voice'
 import { avatarUrlFor, resolveImageUrl } from '../utils/avatar'
 import { applyAccessibilitySettings } from '../utils/accessibility'
@@ -37,9 +38,10 @@ function timeAgo(isoString: string): string {
 
 interface Props {
   onLoggedOut: () => void
+  onModeChanged: (mode: DisabilityType) => void
 }
 
-export default function BlindHomeScreen({ onLoggedOut }: Props) {
+export default function BlindHomeScreen({ onLoggedOut, onModeChanged }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [activeFilter, setActiveFilter] = useState('전체')
   const [activePostId, setActivePostId] = useState<string | null>(null)
@@ -221,7 +223,7 @@ export default function BlindHomeScreen({ onLoggedOut }: Props) {
   }
 
   if (activeTab === 'my') {
-    return <BlindMyScreen onTabChange={setActiveTab} onLoggedOut={onLoggedOut} />
+    return <BlindMyScreen onTabChange={setActiveTab} onLoggedOut={onLoggedOut} onModeChanged={onModeChanged} />
   }
 
   if (showWrite) {

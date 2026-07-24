@@ -3,13 +3,14 @@ import styles from './DefaultHomeScreen.styles'
 import BottomNav, { type Tab } from '../components/BottomNav'
 import DefaultPostDetailScreen from './DefaultPostDetailScreen'
 import DefaultWriteScreen from './DefaultWriteScreen'
-import BlindMyScreen from './BlindMyScreen'
+import DefaultMyScreen from './DefaultMyScreen'
 import DefaultChatScreen from './DefaultChatScreen'
 import DefaultFriendScreen from './DefaultFriendScreen'
 import { useProfileModal } from '../hooks/useProfileModal'
 import type { ProfileModalUser } from '../components/BlindUserProfileModal'
 import { getFeed, likePost, unlikePost, type Post } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
+import { type DisabilityType } from '../services/auth'
 import { resolveImageUrl } from '../utils/avatar'
 import { FILTERS, categoryFor } from '../utils/category'
 import searchIcon from '../assets/images/search.svg'
@@ -31,9 +32,10 @@ function timeAgo(isoString: string): string {
 
 interface Props {
   onLoggedOut: () => void
+  onModeChanged: (mode: DisabilityType) => void
 }
 
-export default function DefaultHomeScreen({ onLoggedOut }: Props) {
+export default function DefaultHomeScreen({ onLoggedOut, onModeChanged }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [activeFilter, setActiveFilter] = useState('전체')
   const [searchQuery, setSearchQuery] = useState('')
@@ -142,7 +144,7 @@ export default function DefaultHomeScreen({ onLoggedOut }: Props) {
   }
 
   if (activeTab === 'my') {
-    return <BlindMyScreen onTabChange={setActiveTab} onLoggedOut={onLoggedOut} />
+    return <DefaultMyScreen onTabChange={setActiveTab} onLoggedOut={onLoggedOut} onModeChanged={onModeChanged} />
   }
 
   if (showWrite) {
@@ -213,8 +215,6 @@ export default function DefaultHomeScreen({ onLoggedOut }: Props) {
         </div>
       </div>
 
-      <div className={styles.divider} />
-
       {isLoading ? (
         <div className="flex flex-1 items-center justify-center py-20">
           <span className="text-black/40 text-sm">피드를 불러오는 중...</span>
@@ -225,7 +225,7 @@ export default function DefaultHomeScreen({ onLoggedOut }: Props) {
           <button
             type="button"
             onClick={() => loadPosts(null, true)}
-            className="rounded-xl bg-[#F7F7F9] px-5 py-3 text-black text-sm"
+            className="rounded-xl bg-white shadow-sm px-5 py-3 text-black text-sm"
           >
             다시 시도
           </button>

@@ -2,12 +2,12 @@ import typography from '../styles/typography'
 import colors from '../styles/colors'
 
 const styles = {
-  container: 'min-h-screen bg-white flex flex-col pb-24',
+  container: 'min-h-screen bg-[#F7F7F9] flex flex-col pb-24',
 
   searchWrapper: 'px-5 pt-6 pb-3',
   searchBox: [
-    'flex items-center gap-2 rounded-2xl px-4 py-3',
-    colors.bg.gray04,
+    'flex items-center gap-2 rounded-2xl px-4 py-3 shadow-sm',
+    colors.bg.white,
   ].join(' '),
   searchIcon: 'w-5 h-5 flex-shrink-0',
   searchInput: [
@@ -19,21 +19,19 @@ const styles = {
   filterInner: 'flex gap-2 px-5 pb-4 w-max',
 
   filterActive: [
-    colors.bg.gray02, colors.text.white, 'rounded-full px-4 py-2',
+    colors.bg.gray02, colors.text.white, 'rounded-full px-4 py-2 shadow-sm',
     typography.sm, typography.bold,
   ].join(' '),
   filterInactive: [
-    colors.bg.gray04, colors.text.gray01, 'rounded-full px-4 py-2',
+    colors.bg.white, colors.text.gray01, 'rounded-full px-4 py-2 shadow-sm',
     typography.sm, typography.medium,
   ].join(' '),
 
-  divider: ['h-2', colors.bg.gray04].join(' '),
-
-  list: 'flex-1 flex flex-col',
+  list: 'flex-1 flex flex-col px-5 gap-3 pt-1',
 
   row: [
-    'flex items-center gap-3 px-5 py-4 border-b cursor-pointer',
-    colors.border.gray03, 'active:bg-[#F7F7F9] transition-colors',
+    'flex items-center gap-3 rounded-2xl bg-white shadow-sm p-4 cursor-pointer',
+    'active:opacity-90 transition-opacity',
   ].join(' '),
   rowMain: 'flex-1 min-w-0 flex flex-col gap-1',
   rowCategory: [typography.xs, typography.bold, 'text-[#8E8E93]'].join(' '),
@@ -50,7 +48,7 @@ const styles = {
   rowMetaIconActive: 'w-3.5 h-3.5',
   rowMetaTextActive: [typography.xs, typography.bold, 'text-[#FF5A5F]'].join(' '),
 
-  rowThumb: 'w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-[#F7F7F9]',
+  rowThumb: ['w-16 h-16 rounded-xl object-cover flex-shrink-0', colors.bg.gray04].join(' '),
 
   fab: [
     'fixed bottom-24 right-5 w-14 h-14 rounded-full z-40',

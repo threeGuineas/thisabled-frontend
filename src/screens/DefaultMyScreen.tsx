@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import styles from './BlindMyScreen.styles'
+import styles from './DefaultMyScreen.styles'
 import BottomNav, { type Tab } from '../components/BottomNav'
 import modeIcon from '../assets/images/mode.svg'
 import checkYIcon from '../assets/images/check-y.svg'
-import eyeIcon from '../assets/images/eye-w.svg'
-import friendWIcon from '../assets/images/friend-w.svg'
-import backIcon from '../assets/images/back-g.svg'
+import friendIcon from '../assets/images/friend.svg'
+import backIcon from '../assets/images/back.svg'
 import chevronIcon from '../assets/images/next.svg'
 import {
   getMe, updateMe, setMode, getTags, setTags, updateSettings, deleteAccount,
-  type MeProfile, type Tag, type ModeSettings,
+  type MeProfile, type Tag,
 } from '../services/users'
 import { uploadImages } from '../services/media'
 import { logout, tokenStorage } from '../services/auth'
@@ -17,7 +16,6 @@ import { getFriends, getBlocks, unfriend, unblockUser } from '../services/friend
 import type { Author } from '../services/posts'
 import { avatarUrlFor } from '../utils/avatar'
 import { groupByCategory } from '../utils/tags'
-import { applyAccessibilitySettings } from '../utils/accessibility'
 
 const NICKNAME_REGEX = /^[가-힣a-zA-Z0-9]{2,12}$/
 const BIO_MAX_LENGTH = 300
@@ -33,7 +31,7 @@ const MODES = [
 ] as const
 
 type ModeId = typeof MODES[number]['id']
-type View = 'main' | 'editProfile' | 'tags' | 'withdraw' | 'fontSettings' | 'contacts'
+type View = 'main' | 'editProfile' | 'tags' | 'withdraw' | 'contacts'
 type PostsAction = 'anonymize' | 'delete'
 
 interface Props {
@@ -42,13 +40,16 @@ interface Props {
   onModeChanged: (mode: ModeId) => void
 }
 
-export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged }: Props) {
+export default function DefaultMyScreen({ onTabChange, onLoggedOut, onModeChanged }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('my')
   const [view, setView] = useState<View>('main')
 
   const [me, setMe] = useState<MeProfile | null>(null)
   const [meError, setMeError] = useState('')
 
+  // 서버 ui_mode는 'default'를 표현하지 못해(§5) 이 화면에 진입한 시점의 로컬 상태를 기준으로
+  // '기본화면'을 활성 모드로 표시한다. 다른 모드로 전환하면 그 시점부터 로컬 값을 따라간다.
+  const [activeModeId, setActiveModeId] = useState<ModeId>('default')
   const [pendingMode, setPendingMode] = useState<ModeId | null>(null)
   const [modeSaving, setModeSaving] = useState(false)
   const [modeError, setModeError] = useState('')
@@ -57,10 +58,7 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged 
   const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
-    getMe().then((profile) => {
-      setMe(profile)
-      applyAccessibilitySettings(profile.mode_settings)
-    }).catch(() => setMeError('프로필을 불러오지 못했어요.'))
+    getMe().then(setMe).catch(() => setMeError('프로필을 불러오지 못했어요.'))
   }, [])
 
   const handleTabChange = (tab: Tab) => {
@@ -69,7 +67,7 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged 
   }
 
   const handleModeClick = (id: ModeId) => {
-    if (!me || id === me.ui_mode) return
+    if (!me || id === activeModeId) return
     setModeError('')
     setPendingMode(id)
   }
@@ -81,6 +79,7 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged 
     try {
       const updated = await setMode(pendingMode)
       setMe(updated)
+      setActiveModeId(pendingMode)
       setPendingMode(null)
       // 모드가 바뀌면 앱 전체 화면 구성 자체가 달라지므로(§5), 상위(App)에 알려
       // 알맞은 홈 화면(BlindHomeScreen/DefaultHomeScreen)으로 전환한다.
@@ -148,16 +147,6 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged 
     )
   }
 
-  if (view === 'fontSettings' && me) {
-    return (
-      <FontSettingsView
-        me={me}
-        onSaved={(updated) => { setMe(updated); setView('main') }}
-        onBack={() => setView('main')}
-      />
-    )
-  }
-
   if (view === 'contacts') {
     return <ContactsManageView onBack={() => setView('main')} />
   }
@@ -172,25 +161,32 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged 
       <div className={styles.section}>
         <div className={styles.profileCard}>
           <div className={styles.profileRow}>
-            {me?.profile_image_url ? (
-              <img src={avatarUrlFor(me.profile_image_url, me.id)} alt="" className={styles.avatar} />
-            ) : (
-              <div className={`${styles.avatar} bg-[#FFD60A] flex items-center justify-center rounded-full text-black font-bold text-xl`}>
-                {me ? me.nickname[0].toUpperCase() : '?'}
-              </div>
-            )}
-            <span className={styles.nickname}>{me ? me.nickname : meError || '불러오는 중...'}</span>
-          </div>
+            <div className={styles.profileInfo}>
+              {me?.profile_image_url ? (
+                <img src={avatarUrlFor(me.profile_image_url, me.id)} alt="" className={styles.avatar} />
+              ) : (
+                <div className={`${styles.avatar} bg-[#FFD60A] flex items-center justify-center rounded-full text-black font-bold text-xl`}>
+                  {me ? me.nickname[0].toUpperCase() : '?'}
+                </div>
+              )}
+              <span className={styles.nickname}>{me ? me.nickname : meError || '불러오는 중...'}</span>
+            </div>
 
-          <button type="button" disabled={!me} onClick={() => setView('editProfile')} className={styles.editButton}>
-            <span className={styles.editButtonText}>프로필 편집</span>
-          </button>
+            <button type="button" disabled={!me} onClick={() => setView('editProfile')} className={styles.editButton}>
+              <span className={styles.editButtonText}>편집</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* 관심사 태그 */}
       <div className={styles.tagsSection}>
-        <span className={styles.tagsSectionTitle}>관심사 태그</span>
+        <div className={styles.tagsSectionHeader}>
+          <span className={styles.tagsSectionTitle}>관심사 태그</span>
+          <button type="button" disabled={!me} onClick={() => setView('tags')} className={styles.tagsEditButton}>
+            <span className={styles.tagsEditButtonText}>편집</span>
+          </button>
+        </div>
         <div className={styles.tagsCard}>
           {me && me.tags.length > 0 ? (
             <div className={styles.tagsChipRow}>
@@ -201,9 +197,6 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged 
           ) : (
             <span className={styles.tagsEmptyText}>아직 등록한 관심사 태그가 없어요.</span>
           )}
-          <button type="button" disabled={!me} onClick={() => setView('tags')} className={styles.tagsEditButton}>
-            <span className={styles.tagsEditButtonText}>태그 편집</span>
-          </button>
         </div>
       </div>
 
@@ -213,7 +206,7 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged 
         <div className={styles.modeCard}>
           <div className={styles.modeList}>
             {MODES.map((mode, idx) => {
-              const isActive = me?.ui_mode === mode.id
+              const isActive = activeModeId === mode.id
               return (
                 <div key={mode.id}>
                   {idx !== 0 && <div className={styles.modeDivider} />}
@@ -268,20 +261,9 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged 
         <span className={styles.etcSectionTitle}>기타</span>
         <div className={styles.etcCard}>
           <div className={styles.etcList}>
-            <button type="button" onClick={() => setView('fontSettings')} disabled={!me} className={styles.etcButton}>
-              <div className={styles.etcIconWrapper}>
-                <img src={eyeIcon} alt="" className={styles.etcIcon} />
-              </div>
-              <div className={styles.etcTextGroup}>
-                <span className={styles.etcTitle}>글자 크기 · 대비</span>
-                <span className={styles.etcDesc}>시각 모드 글자 크기와 대비 조절</span>
-              </div>
-              <img src={modeIcon} alt="" className={styles.etcRightIcon} />
-            </button>
-            <div className={styles.etcDivider} />
             <button type="button" onClick={() => setView('contacts')} className={styles.etcButton}>
               <div className={styles.etcIconWrapper}>
-                <img src={friendWIcon} alt="" className={styles.etcIcon} />
+                <img src={friendIcon} alt="" className={styles.etcIcon} />
               </div>
               <div className={styles.etcTextGroup}>
                 <span className={styles.etcTitle}>친구 및 차단 사용자 관리</span>
@@ -326,12 +308,12 @@ export default function BlindMyScreen({ onTabChange, onLoggedOut, onModeChanged 
         </button>
       </div>}
 
-      <BottomNav variant="blind" active={activeTab} onChange={handleTabChange} />
+      <BottomNav variant="default" active={activeTab} onChange={handleTabChange} />
     </div>
   )
 }
 
-// ── 프로필 편집 (§2) ────────────────────────────────────────────────────
+// ── 프로필 편집 ──────────────────────────────────────────────────────────
 interface ProfileEditViewProps {
   me: MeProfile
   onSaved: (updated: MeProfile) => void
@@ -413,7 +395,7 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
   const avatarSrc = photoPreview ?? (me.profile_image_url ? avatarUrlFor(me.profile_image_url, me.id) : null)
 
   return (
-    <div className={styles.container}>
+    <div className={styles.subContainer}>
       <div className={styles.subHeader}>
         <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로가기">
           <img src={backIcon} alt="" className={styles.subBackIcon} />
@@ -480,7 +462,7 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
   )
 }
 
-// ── 관심사 태그 편집 (§3) ───────────────────────────────────────────────
+// ── 관심사 태그 편집 ────────────────────────────────────────────────────
 interface TagsEditViewProps {
   me: MeProfile
   onSaved: (updated: MeProfile) => void
@@ -539,7 +521,7 @@ function TagsEditView({ me, onSaved, onBack }: TagsEditViewProps) {
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.subContainer}>
       <div className={styles.subHeader}>
         <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로가기">
           <img src={backIcon} alt="" className={styles.subBackIcon} />
@@ -605,7 +587,7 @@ function TagsEditView({ me, onSaved, onBack }: TagsEditViewProps) {
   )
 }
 
-// ── 회원 탈퇴 (§7) ──────────────────────────────────────────────────────
+// ── 회원 탈퇴 ──────────────────────────────────────────────────────────
 interface WithdrawViewProps {
   onWithdrawn: () => void
   onBack: () => void
@@ -635,7 +617,7 @@ function WithdrawView({ onWithdrawn, onBack }: WithdrawViewProps) {
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.subContainer}>
       <div className={styles.subHeader}>
         <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로가기">
           <img src={backIcon} alt="" className={styles.subBackIcon} />
@@ -701,111 +683,7 @@ function WithdrawView({ onWithdrawn, onBack }: WithdrawViewProps) {
   )
 }
 
-// ── 글자 크기 · 대비 (시각 모드 mode_settings, §4) ─────────────────────
-interface FontSettingsViewProps {
-  me: MeProfile
-  onSaved: (updated: MeProfile) => void
-  onBack: () => void
-}
-
-const FONT_SCALE_OPTIONS = [
-  { id: 'small', label: '작게', value: 0.9 },
-  { id: 'medium', label: '보통', value: 1.0 },
-  { id: 'large', label: '크게', value: 1.25 },
-] as const
-
-function FontSettingsView({ me, onSaved, onBack }: FontSettingsViewProps) {
-  const [fontScale, setFontScale] = useState<number>(me.mode_settings.font_scale ?? 1.0)
-  const [highContrast, setHighContrast] = useState(!!me.mode_settings.high_contrast)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
-
-  const previewTextClass =
-    fontScale >= 1.25 ? styles.fontPreviewTextLarge
-    : fontScale <= 0.9 ? styles.fontPreviewTextSmall
-    : styles.fontPreviewTextMedium
-
-  const handleSave = async () => {
-    if (saving) return
-    setSaving(true)
-    setError('')
-    try {
-      // mode_settings는 PATCH할 때 전체 교체이므로 기존 값을 펼쳐 다른 키를 보존한다.
-      const patch: ModeSettings = { ...me.mode_settings, font_scale: fontScale, high_contrast: highContrast }
-      const updated = await updateSettings({ mode_settings: patch })
-      applyAccessibilitySettings(updated.mode_settings)
-      onSaved(updated)
-    } catch {
-      setError('저장 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className={styles.container}>
-      <div className={styles.subHeader}>
-        <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로가기">
-          <img src={backIcon} alt="" className={styles.subBackIcon} />
-        </button>
-        <span className={styles.subHeaderTitle}>글자 크기 · 대비</span>
-      </div>
-
-      <div className={styles.fontSettingsBody}>
-        <div className={highContrast ? styles.fontPreviewCardHighContrast : styles.fontPreviewCard}>
-          <p className={previewTextClass}>미리보기 텍스트입니다</p>
-        </div>
-
-        <div className={styles.editFieldWrapper}>
-          <label className={styles.editLabel}>글자 크기</label>
-          <div className={styles.fontScaleRow}>
-            {FONT_SCALE_OPTIONS.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setFontScale(opt.value)}
-                className={fontScale === opt.value ? styles.fontScaleButtonActive : styles.fontScaleButton}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.settingsCard}>
-          <div className={styles.settingsRow}>
-            <div className={styles.settingsTextGroup}>
-              <span className={styles.settingsTitle}>고대비 모드</span>
-              <span className={styles.settingsDesc}>배경과 글자의 명암 대비를 높여요</span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={highContrast}
-              aria-label="고대비 모드"
-              onClick={() => setHighContrast((prev) => !prev)}
-              className={[styles.toggleTrack, highContrast ? styles.toggleTrackOn : styles.toggleTrackOff].join(' ')}
-            >
-              <span className={[styles.toggleKnob, highContrast ? styles.toggleKnobOn : styles.toggleKnobOff].join(' ')} />
-            </button>
-          </div>
-        </div>
-
-        {error && <p className={styles.editApiError}>{error}</p>}
-
-        <button type="button" disabled={saving} onClick={handleSave} className={styles.editSaveButton}>
-          <span className={styles.editSaveButtonText}>{saving ? '저장 중...' : '저장하기'}</span>
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── 친구 및 차단 사용자 관리 (마이페이지 진입점 — 상세는 friend-frontend-guide.md) ──
+// ── 친구 및 차단 사용자 관리 ────────────────────────────────────────────
 interface ContactsManageViewProps {
   onBack: () => void
 }
@@ -872,7 +750,7 @@ function ContactsManageView({ onBack }: ContactsManageViewProps) {
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.subContainer}>
       <div className={styles.subHeader}>
         <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로가기">
           <img src={backIcon} alt="" className={styles.subBackIcon} />

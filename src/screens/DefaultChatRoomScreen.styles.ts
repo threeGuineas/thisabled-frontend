@@ -4,7 +4,7 @@ import colors from '../styles/colors'
 const styles = {
   container: [colors.bg.gray03, 'min-h-screen flex flex-col'].join(' '),
 
-  header: [colors.bg.white, 'flex items-center gap-3 px-4 py-3 border-b', colors.border.gray03].join(' '),
+  header: [colors.bg.white, 'flex items-center gap-3 px-4 py-3 shadow-sm relative z-10'].join(' '),
   backButton: 'w-9 h-9 -ml-1 rounded-full flex items-center justify-center flex-shrink-0 active:bg-[#F7F7F9]',
   backIcon: 'w-5 h-5',
   avatar: ['w-9 h-9 rounded-full object-cover flex-shrink-0', colors.bg.gray04].join(' '),
@@ -15,13 +15,13 @@ const styles = {
   headerActionIcon: 'w-5 h-5',
 
   // 상대의 SAFE-05 전송 제한 해제 배너
-  restrictionBanner: 'mx-4 mt-3 flex items-center justify-between gap-3 rounded-2xl bg-red-50 px-4 py-3',
+  restrictionBanner: 'mx-4 mt-3 flex items-center justify-between gap-3 rounded-2xl bg-red-50 px-4 py-3 shadow-sm',
   restrictionText: ['flex-1 text-red-500', typography.xs, typography.regular].join(' '),
   restrictionButton: [colors.bg.yellow, 'flex-shrink-0 rounded-full px-3 py-2 text-black disabled:opacity-40', typography.xs, typography.bold].join(' '),
 
   // 요청 방에서 상대 수락 대기 중 배너
-  pendingBanner: ['mx-4 mt-3 rounded-2xl px-4 py-3', colors.bg.gray04].join(' '),
-  pendingBannerFixed: ['fixed left-4 right-4 bottom-4 z-30 rounded-2xl px-4 py-3', colors.bg.gray04].join(' '),
+  pendingBanner: [colors.bg.white, 'mx-4 mt-3 rounded-2xl px-4 py-3 shadow-sm'].join(' '),
+  pendingBannerFixed: [colors.bg.white, 'fixed left-4 right-4 bottom-4 z-30 rounded-2xl px-4 py-3 shadow-sm'].join(' '),
   pendingText: ['text-[#757575] text-center', typography.xs, typography.regular].join(' '),
 
   dateDivider: 'flex items-center justify-center py-3',
