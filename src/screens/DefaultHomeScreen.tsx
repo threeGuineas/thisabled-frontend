@@ -4,7 +4,7 @@ import BottomNav, { type Tab } from '../components/BottomNav'
 import DefaultPostDetailScreen from './DefaultPostDetailScreen'
 import DefaultWriteScreen from './DefaultWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
-import BlindChatScreen from './BlindChatScreen'
+import DefaultChatScreen from './DefaultChatScreen'
 import DefaultFriendScreen from './DefaultFriendScreen'
 import { useProfileModal } from '../hooks/useProfileModal'
 import type { ProfileModalUser } from '../components/BlindUserProfileModal'
@@ -133,7 +133,7 @@ export default function DefaultHomeScreen({ onLoggedOut }: Props) {
 
   if (activeTab === 'chat') {
     return (
-      <BlindChatScreen
+      <DefaultChatScreen
         onTabChange={setActiveTab}
         targetUser={chatTarget}
         onTargetUserConsumed={() => setChatTarget(null)}
