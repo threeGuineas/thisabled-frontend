@@ -18,7 +18,7 @@ const styles = {
   userInfo: 'flex items-center gap-3 mt-3',
   avatar: 'w-11 h-11 rounded-full object-cover flex-shrink-0',
   avatarFallback: 'w-11 h-11 rounded-full flex items-center justify-center text-black font-bold text-base flex-shrink-0',
-  userMeta: 'flex flex-col',
+  userMeta: 'flex flex-col items-start text-left',
   nickname: [typography.sm, typography.semibold, 'text-black'].join(' '),
   time: [typography.xs, typography.regular, 'text-[#9898A8] mt-0.5'].join(' '),
 

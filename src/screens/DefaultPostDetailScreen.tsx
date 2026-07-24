@@ -37,7 +37,7 @@ interface Props {
 }
 
 export default function DefaultPostDetailScreen({ post, category, me, onBack, onToggleLike, onCommentCountChange, onMessage }: Props) {
-  const { openProfile, profileModal } = useProfileModal(onMessage)
+  const { openProfile, profileModal } = useProfileModal(onMessage, 'default')
 
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -90,6 +90,10 @@ export default function DefaultPostDetailScreen({ post, category, me, onBack, on
   const isAuthorMine = !!(me && post.author.id && String(post.author.id) === String(me.id))
   const authorNickname = isAuthorMine ? me!.nickname : post.author.nickname
   const authorAvatarUrl = avatarUrlFor(post.author.profile_image_url, String(post.author.id ?? post.id))
+  const handleOpenAuthorProfile = () => {
+    if (isAuthorMine) return
+    openProfile({ id: post.author.id, nickname: authorNickname, bio: undefined, avatarUrl: authorAvatarUrl })
+  }
 
   const canSend = commentText.trim().length > 0 && !isSubmitting
 
@@ -105,17 +109,30 @@ export default function DefaultPostDetailScreen({ post, category, me, onBack, on
         <span className={styles.category}>{category}</span>
 
         <div className={styles.userInfo}>
-          {!post.author.profile_image_url && isAuthorMine ? (
-            <div className={`${styles.avatarFallback} bg-[#FFD60A]`}>
-              {authorNickname[0].toUpperCase()}
-            </div>
-          ) : (
-            <img src={authorAvatarUrl} alt="" className={styles.avatar} />
-          )}
-          <div className={styles.userMeta}>
+          <button
+            type="button"
+            onClick={handleOpenAuthorProfile}
+            disabled={isAuthorMine}
+            aria-label={isAuthorMine ? undefined : `${authorNickname}님 프로필 보기`}
+          >
+            {!post.author.profile_image_url && isAuthorMine ? (
+              <div className={`${styles.avatarFallback} bg-[#FFD60A]`}>
+                {authorNickname[0].toUpperCase()}
+              </div>
+            ) : (
+              <img src={authorAvatarUrl} alt="" className={styles.avatar} />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenAuthorProfile}
+            disabled={isAuthorMine}
+            className={styles.userMeta}
+            aria-label={isAuthorMine ? undefined : `${authorNickname}님 프로필 보기`}
+          >
             <span className={styles.nickname}>{authorNickname}</span>
             <span className={styles.time}>{timeAgo(post.created_at)}</span>
-          </div>
+          </button>
         </div>
 
         <p className={styles.content}>{post.content}</p>
