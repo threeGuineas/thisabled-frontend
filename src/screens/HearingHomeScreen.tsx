@@ -3,7 +3,7 @@ import styles from './HearingHomeScreen.styles'
 import BottomNav, { type Tab } from '../components/BottomNav'
 import NotificationBanner from '../components/NotificationBanner'
 import NotificationDetailScreen from './NotificationDetailScreen'
-import DefaultPostDetailScreen from './DefaultPostDetailScreen'
+import HearingPostDetailScreen from './HearingPostDetailScreen'
 import DefaultWriteScreen from './DefaultWriteScreen'
 import DefaultMyScreen from './DefaultMyScreen'
 import DefaultChatScreen from './DefaultChatScreen'
@@ -169,7 +169,7 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
   const activePost = activePostId ? posts.find((p) => p.id === activePostId) ?? null : null
   if (activePost) {
     return (
-      <DefaultPostDetailScreen
+      <HearingPostDetailScreen
         post={activePost}
         category={categoryFor(activePost.id)}
         me={me}

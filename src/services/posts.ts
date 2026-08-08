@@ -1,4 +1,5 @@
 import { authedRequest, IS_MOCK } from './auth'
+import { type CaptionSegment } from '../utils/vtt'
 
 export interface Author {
   id: string | null
@@ -6,7 +7,8 @@ export interface Author {
   profile_image_url: string | null
 }
 
-export type DescriptionStatus = 'none' | 'processing' | 'done' | 'failed'
+export type AiStatus = 'none' | 'processing' | 'done' | 'failed'
+export type DescriptionStatus = AiStatus
 
 export interface PostMediaItem {
   id: string
@@ -15,8 +17,8 @@ export interface PostMediaItem {
   sort_order: number
   description: string | null
   description_status: DescriptionStatus
-  caption: unknown[] | null
-  caption_status: string
+  caption: CaptionSegment[] | null
+  caption_status: AiStatus
 }
 
 export interface Post {
@@ -90,6 +92,17 @@ const MOCK_VISION_DESCRIPTIONS = [
   '빵집에서 찍은 사진입니다. 갓 구운 크루아상이 접시에 담겨 있고, 배경에는 따뜻한 카페 분위기가 느껴집니다.',
 ]
 
+// mock 모드에서 CAPTION-01(영상 자막) 화면을 확인할 수 있도록 사용하는 샘플 영상/세그먼트.
+// 실제 백엔드는 게시(publish) 시점에 자막 생성이 끝나 있어야 하므로(processing이면 409),
+// 이미 게시된 피드에 노출되는 영상은 항상 done 또는 failed 상태다.
+// 세그먼트 종료 시각은 샘플 영상 길이(약 5초)를 넘지 않도록 맞춘다 — 넘으면 마지막 자막이 재생되지 않는다.
+const MOCK_VIDEO_URL = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
+const MOCK_CAPTION_SEGMENTS: CaptionSegment[] = [
+  { start: 0, end: 1.6, text: '안녕하세요, 오늘 소개할 영상입니다.' },
+  { start: 1.6, end: 3.4, text: '청각장애인을 위한 자막 기능을 시연합니다.' },
+  { start: 3.4, end: 5.0, text: '시청해주셔서 감사합니다.' },
+]
+
 // mock 모드에서 VISION-01(사진 설명) 백그라운드 생성을 흉내내기 위한 상태 저장소.
 // 실제 백엔드에는 전용 폴링 API가 없으므로 GET /posts/{id} 재조회로 상태 변화를 확인해야 하고,
 // mock도 동일하게 getPost() 재호출 시점에 processing → done으로 전환되도록 만든다.
@@ -104,7 +117,20 @@ function mockDescriptionFor(mediaId: string): string {
 }
 
 function mockMedia(idx: number): PostMediaItem[] {
-  if (idx % 3 === 2) return []
+  if (idx % 4 === 2) return []
+  if (idx % 4 === 3) {
+    const failed = idx % 8 === 3
+    return [{
+      id: crypto.randomUUID(),
+      media_type: 'video',
+      url: MOCK_VIDEO_URL,
+      sort_order: 0,
+      description: null,
+      description_status: 'none',
+      caption: failed ? null : MOCK_CAPTION_SEGMENTS,
+      caption_status: failed ? 'failed' : 'done',
+    }]
+  }
   const id = crypto.randomUUID()
   mockDescriptionReadyAt.set(id, Date.now() + 3000)
   return [{
