@@ -18,6 +18,10 @@ import { getFriends, getBlocks, unfriend, unblockUser } from '../services/friend
 import type { Author } from '../services/posts'
 import { avatarUrlFor } from '../utils/avatar'
 import { groupByCategory } from '../utils/tags'
+import {
+  getCaptionPreferences, setCaptionPreferences,
+  type CaptionSize, type CaptionColor,
+} from '../utils/captionPreferences'
 
 const NICKNAME_REGEX = /^[가-힣a-zA-Z0-9]{2,12}$/
 const BIO_MAX_LENGTH = 300
@@ -36,8 +40,6 @@ type ModeId = typeof MODES[number]['id']
 type View = 'main' | 'editProfile' | 'tags' | 'withdraw' | 'contacts'
 type PostsAction = 'anonymize' | 'delete'
 type ModeSettingsToggle = 'captions' | 'vibration' | 'visual_alerts'
-type CaptionSize = 'small' | 'medium' | 'large'
-type CaptionColor = 'black' | 'white' | 'yellow'
 
 const CAPTION_SIZES: { id: CaptionSize; label: string }[] = [
   { id: 'small', label: '작게' },
@@ -73,13 +75,32 @@ export default function HearingMyScreen({ onTabChange, onLoggedOut, onModeChange
   const [strangerSaving, setStrangerSaving] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
-  // 자막 설정 — 표시 여부는 서버(mode_settings.captions)와 동기화하고, 크기·색상은 이 화면 안에서만 쓰는 미리보기 설정이다.
-  const [captionsEnabled, setCaptionsEnabled] = useState(true)
+  // 자막 표시 여부는 실제 동영상 자막 버튼(VideoCaptionPlayer)과 같은 로컬 저장값을 공유해야 하므로
+  // 여기서 시작값을 읽는다 — mock 서버의 mode_settings.captions는 새로고침마다 초기화돼 신뢰할 수 없다.
+  const [captionsEnabled, setCaptionsEnabled] = useState(() => getCaptionPreferences().enabled)
   const [vibrationEnabled, setVibrationEnabled] = useState(true)
   const [bannerEnabled, setBannerEnabled] = useState(true)
   const [savingSettingKey, setSavingSettingKey] = useState<ModeSettingsToggle | null>(null)
-  const [captionSize, setCaptionSize] = useState<CaptionSize>('medium')
-  const [captionColor, setCaptionColor] = useState<CaptionColor>('white')
+  // 실제 동영상 자막(<track>) 렌더링과 공유하는 값이라, 로컬 스토리지에 저장된 값으로 시작한다.
+  const [captionSize, setCaptionSizeState] = useState<CaptionSize>(() => getCaptionPreferences().size)
+  const [captionColor, setCaptionColorState] = useState<CaptionColor>(() => getCaptionPreferences().color)
+
+  const handleCaptionSizeChange = (size: CaptionSize) => {
+    setCaptionSizeState(size)
+    setCaptionPreferences({ enabled: captionsEnabled, size, color: captionColor })
+  }
+
+  const handleCaptionColorChange = (color: CaptionColor) => {
+    setCaptionColorState(color)
+    setCaptionPreferences({ enabled: captionsEnabled, size: captionSize, color })
+  }
+
+  // 영상 자막 표시 토글은 낙관적 업데이트/실패 시 롤백을 toggleModeSetting이 처리하므로,
+  // captionsEnabled가 실제로 바뀔 때마다 여기서 동영상 자막 버튼에도 그대로 반영한다.
+  useEffect(() => {
+    setCaptionPreferences({ enabled: captionsEnabled, size: captionSize, color: captionColor })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captionsEnabled])
 
   useEffect(() => {
     getMe().then(setMe).catch(() => setMeError('프로필을 불러오지 못했어요.'))
@@ -87,7 +108,6 @@ export default function HearingMyScreen({ onTabChange, onLoggedOut, onModeChange
 
   useEffect(() => {
     if (!me) return
-    setCaptionsEnabled(me.mode_settings.captions ?? true)
     setVibrationEnabled(me.mode_settings.vibration ?? true)
     setBannerEnabled(me.mode_settings.visual_alerts ?? true)
   }, [me])
@@ -315,59 +335,63 @@ export default function HearingMyScreen({ onTabChange, onLoggedOut, onModeChange
             </button>
           </div>
 
-          <div className={styles.captionDivider} />
+          {captionsEnabled && (
+            <>
+              <div className={styles.captionDivider} />
 
-          <div className={styles.captionPreviewSection}>
-            <span className={styles.captionPreviewLabel}>자막 미리보기</span>
-            <div className={styles.captionPreviewBox}>
-              <span className={[captionPreviewSizeClass, captionPreviewColorClass].join(' ')}>
-                이렇게 자막이 표시돼요
-              </span>
-            </div>
+              <div className={styles.captionPreviewSection}>
+                <span className={styles.captionPreviewLabel}>자막 미리보기</span>
+                <div className={styles.captionPreviewBox}>
+                  <span className={[captionPreviewSizeClass, captionPreviewColorClass].join(' ')}>
+                    이렇게 자막이 표시돼요
+                  </span>
+                </div>
 
-            <span className={styles.captionPreviewLabel}>자막 크기</span>
-            <div className={styles.captionSizeRow} role="tablist" aria-label="자막 크기 선택">
-              {CAPTION_SIZES.map((size) => (
-                <button
-                  key={size.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={captionSize === size.id}
-                  onClick={() => setCaptionSize(size.id)}
-                  className={captionSize === size.id ? styles.captionSizeButtonActive : styles.captionSizeButtonInactive}
-                >
-                  {size.label}
-                </button>
-              ))}
-            </div>
+                <span className={styles.captionPreviewLabel}>자막 크기</span>
+                <div className={styles.captionSizeRow} role="tablist" aria-label="자막 크기 선택">
+                  {CAPTION_SIZES.map((size) => (
+                    <button
+                      key={size.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={captionSize === size.id}
+                      onClick={() => handleCaptionSizeChange(size.id)}
+                      className={captionSize === size.id ? styles.captionSizeButtonActive : styles.captionSizeButtonInactive}
+                    >
+                      {size.label}
+                    </button>
+                  ))}
+                </div>
 
-            <span className={styles.captionPreviewLabel}>자막 색상</span>
-            <div className={styles.captionColorRow}>
-              {CAPTION_COLORS.map((color) => {
-                const isActive = captionColor === color.id
-                return (
-                  <button
-                    key={color.id}
-                    type="button"
-                    onClick={() => setCaptionColor(color.id)}
-                    className={styles.captionColorButton}
-                    aria-pressed={isActive}
-                    aria-label={`자막 색상 ${color.label}`}
-                  >
-                    <span
-                      className={[
-                        isActive ? styles.captionColorSwatchActive : styles.captionColorSwatch,
-                        captionColorSwatchClass(color.id),
-                      ].join(' ')}
-                    />
-                    <span className={isActive ? styles.captionColorLabelActive : styles.captionColorLabel}>
-                      {color.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+                <span className={styles.captionPreviewLabel}>자막 색상</span>
+                <div className={styles.captionColorRow}>
+                  {CAPTION_COLORS.map((color) => {
+                    const isActive = captionColor === color.id
+                    return (
+                      <button
+                        key={color.id}
+                        type="button"
+                        onClick={() => handleCaptionColorChange(color.id)}
+                        className={styles.captionColorButton}
+                        aria-pressed={isActive}
+                        aria-label={`자막 색상 ${color.label}`}
+                      >
+                        <span
+                          className={[
+                            isActive ? styles.captionColorSwatchActive : styles.captionColorSwatch,
+                            captionColorSwatchClass(color.id),
+                          ].join(' ')}
+                        />
+                        <span className={isActive ? styles.captionColorLabelActive : styles.captionColorLabel}>
+                          {color.label}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

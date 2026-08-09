@@ -102,6 +102,7 @@ const MOCK_CAPTION_SEGMENTS: CaptionSegment[] = [
   { start: 1.6, end: 3.4, text: '청각장애인을 위한 자막 기능을 시연합니다.' },
   { start: 3.4, end: 5.0, text: '시청해주셔서 감사합니다.' },
 ]
+const MOCK_CAPTION_DEMO_CONTENT = '영상 자막이 정상적으로 잘 나오는지 확인해보는 예시 게시물이에요. 재생 버튼을 눌러서 자막을 켜보세요!'
 
 // mock 모드에서 VISION-01(사진 설명) 백그라운드 생성을 흉내내기 위한 상태 저장소.
 // 실제 백엔드에는 전용 폴링 API가 없으므로 GET /posts/{id} 재조회로 상태 변화를 확인해야 하고,
@@ -117,6 +118,20 @@ function mockDescriptionFor(mediaId: string): string {
 }
 
 function mockMedia(idx: number): PostMediaItem[] {
+  // 청각모드 자막(CAPTION-01)이 정상 동작하는 예시를 스크롤 없이 바로 확인할 수 있도록,
+  // 피드 맨 앞(idx 0)은 실패 없이 항상 자막 생성이 완료된 영상으로 고정한다.
+  if (idx === 0) {
+    return [{
+      id: crypto.randomUUID(),
+      media_type: 'video',
+      url: MOCK_VIDEO_URL,
+      sort_order: 0,
+      description: null,
+      description_status: 'none',
+      caption: MOCK_CAPTION_SEGMENTS,
+      caption_status: 'done',
+    }]
+  }
   if (idx % 4 === 2) return []
   if (idx % 4 === 3) {
     const failed = idx % 8 === 3
@@ -191,7 +206,7 @@ const mockPosts = {
           nickname: MOCK_NICKNAMES[idx % MOCK_NICKNAMES.length],
           profile_image_url: null,
         },
-        content: MOCK_CONTENTS[idx % MOCK_CONTENTS.length],
+        content: idx === 0 ? MOCK_CAPTION_DEMO_CONTENT : MOCK_CONTENTS[idx % MOCK_CONTENTS.length],
         status: 'published',
         media: mockMedia(idx),
         like_count: idx % 4,
