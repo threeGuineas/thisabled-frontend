@@ -10,8 +10,8 @@ const styles = {
   title: [typography.base, typography.bold, 'text-black'].join(' '),
 
   list: 'flex flex-col px-5 pt-3 gap-2',
-  rowUnread: ['flex items-start gap-3 rounded-2xl px-4 py-3', colors.bg.blue01].join(' '),
-  rowRead: 'flex items-start gap-3 rounded-2xl px-4 py-3',
+  rowUnread: ['flex items-start gap-3 w-full text-left rounded-2xl px-4 py-3', colors.bg.blue01].join(' '),
+  rowRead: 'flex items-start gap-3 w-full text-left rounded-2xl px-4 py-3 bg-white',
 
   iconWrapper: 'relative w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0',
   icon: 'w-5 h-5',

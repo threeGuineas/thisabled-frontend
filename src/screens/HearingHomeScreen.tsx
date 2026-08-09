@@ -10,12 +10,12 @@ import DefaultChatScreen from './DefaultChatScreen'
 import DefaultFriendScreen from './DefaultFriendScreen'
 import { useProfileModal } from '../hooks/useProfileModal'
 import type { ProfileModalUser } from '../components/BlindUserProfileModal'
-import { getFeed, likePost, unlikePost, type Post } from '../services/posts'
+import { getFeed, getPost, likePost, unlikePost, type Post } from '../services/posts'
 import { getMe, type MeProfile } from '../services/users'
 import { type DisabilityType } from '../services/auth'
 import { resolveImageUrl } from '../utils/avatar'
 import { FILTERS, categoryFor } from '../utils/category'
-import { unreadNotificationCount } from '../utils/notifications'
+import { useNotifications } from '../hooks/useNotifications'
 import searchIcon from '../assets/images/search.svg'
 import writeIcon from '../assets/images/write-w.svg'
 import heartIcon from '../assets/images/heart.svg'
@@ -47,6 +47,7 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
   const [showNotifications, setShowNotifications] = useState(false)
 
   const [me, setMe] = useState<MeProfile | null>(null)
+  const { notifications, unreadCount, markAsRead } = useNotifications(me?.mode_settings.vibration ?? true)
   const [chatTarget, setChatTarget] = useState<{ id: string; nickname: string; avatarUrl: string } | null>(null)
 
   const openChatWith = (id: string | null, nickname: string, avatarUrl: string) => {
@@ -167,7 +168,25 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
   }
 
   if (showNotifications) {
-    return <NotificationDetailScreen onBack={() => setShowNotifications(false)} />
+    return (
+      <NotificationDetailScreen
+        notifications={notifications}
+        onBack={() => setShowNotifications(false)}
+        onMarkAsRead={markAsRead}
+        onNavigate={(target) => {
+          setShowNotifications(false)
+          setActiveTab(target.tab)
+          if (target.tab !== 'home' || !target.postId) return
+          const postId = target.postId
+          getPost(postId)
+            .then((post) => {
+              setPosts((prev) => (prev.some((p) => p.id === postId) ? prev : [post, ...prev]))
+              setActivePostId(postId)
+            })
+            .catch(() => {})
+        }}
+      />
+    )
   }
 
   const activePost = activePostId ? posts.find((p) => p.id === activePostId) ?? null : null
@@ -213,7 +232,7 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
       </div>
 
       {(me?.mode_settings.visual_alerts ?? true) && (
-        <NotificationBanner unreadCount={unreadNotificationCount} onMoreClick={() => setShowNotifications(true)} />
+        <NotificationBanner notifications={notifications} unreadCount={unreadCount} onMoreClick={() => setShowNotifications(true)} />
       )}
 
       <div className={styles.filterContainer}>

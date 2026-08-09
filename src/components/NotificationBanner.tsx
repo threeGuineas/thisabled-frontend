@@ -1,24 +1,25 @@
 import { useEffect, useState } from 'react'
 import alarmIcon from '../assets/images/alarm-b.svg'
-import { NOTIFICATIONS } from '../utils/notifications'
+import type { NotificationItem } from '../utils/notifications'
 
 const ROTATE_INTERVAL_MS = 3000
 
 interface Props {
+  notifications: NotificationItem[]
   unreadCount: number
   onMoreClick?: () => void
 }
 
 // 청각모드 전용 — 소리 대신 화면에 남는 시각 알림 배너. 광고 배너처럼 알림 내용이 옆으로 넘어가며 순환된다.
-export default function NotificationBanner({ unreadCount, onMoreClick }: Props) {
+export default function NotificationBanner({ notifications, unreadCount, onMoreClick }: Props) {
   const [index, setIndex] = useState(0)
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setIndex((prev) => (prev + 1) % NOTIFICATIONS.length)
+      setIndex((prev) => (prev + 1) % notifications.length)
     }, ROTATE_INTERVAL_MS)
     return () => clearInterval(timer)
-  }, [])
+  }, [notifications.length])
 
   if (unreadCount <= 0) return null
 
@@ -35,7 +36,7 @@ export default function NotificationBanner({ unreadCount, onMoreClick }: Props) 
             className="flex transition-transform duration-500 ease-in-out"
             style={{ transform: `translateX(-${index * 100}%)` }}
           >
-            {NOTIFICATIONS.map((item, i) => (
+            {notifications.map((item, i) => (
               <span key={i} className="basis-full shrink-0 flex items-center gap-1.5 min-w-0">
                 <img src={item.icon} alt="" className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate text-xs text-[#00000]/70">{item.message}</span>

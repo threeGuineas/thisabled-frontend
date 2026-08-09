@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { segmentsToVtt } from '../utils/vtt'
 import { resolveImageUrl } from '../utils/avatar'
-import { getPost, type PostMediaItem } from '../services/posts'
+import { getPost, requestCaptionGeneration, type PostMediaItem } from '../services/posts'
 import { getCaptionPreferences, subscribeCaptionPreferences, type CaptionPreferences } from '../utils/captionPreferences'
 import errorIcon from '../assets/images/error.svg'
 import duringIcon from '../assets/images/during.svg'
@@ -39,10 +39,14 @@ export default function VideoCaptionPlayer({ postId, media }: Props) {
   const [status, setStatus] = useState(media.caption_status)
   const [caption, setCaption] = useState(media.caption)
   const [isRetrying, setIsRetrying] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [showCaptions, setShowCaptions] = useState(false)
   const [vttUrl, setVttUrl] = useState<string | null>(null)
   const [captionPrefs, setCaptionPrefs] = useState(getCaptionPreferences)
   const trackRef = useRef<HTMLTrackElement>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current) }, [])
 
   // 마이페이지의 자막 크기·색상 설정이 바뀌면 이미 재생 중인 영상의 자막에도 바로 반영한다.
   useEffect(() => subscribeCaptionPreferences(setCaptionPrefs), [])
@@ -84,6 +88,36 @@ export default function VideoCaptionPlayer({ postId, media }: Props) {
     }
   }
 
+  // 자막이 완료(done)되거나 실패(failed)로 바뀔 때까지 게시물을 주기적으로 재조회한다.
+  const pollUntilResolved = () => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      const refreshed = await getPost(postId).catch(() => null)
+      const updated = refreshed?.media.find((m) => m.id === media.id)
+      if (!updated || updated.caption_status === 'processing') return
+      setStatus(updated.caption_status)
+      setCaption(updated.caption)
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }, 1000)
+  }
+
+  const handleGenerate = async () => {
+    if (isGenerating) return
+    setIsGenerating(true)
+    try {
+      await requestCaptionGeneration(postId, media.id)
+      setStatus('processing')
+      pollUntilResolved()
+    } catch {
+      // 요청 실패 시 버튼을 다시 눌러 시도할 수 있게 상태를 유지한다
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   const isReady = status === 'done' && !!vttUrl
   const toggleLabel = showCaptions ? '자막 끄기' : '자막 켜기'
   const cueScopeClass = `caption-cue-${media.id}`
@@ -107,6 +141,11 @@ export default function VideoCaptionPlayer({ postId, media }: Props) {
 
       {captionPrefs.enabled && (
         <div className="flex items-center justify-between gap-2 bg-[#F7F7F9] px-3 py-2">
+          {status === 'none' && (
+            <span className="flex items-center gap-1.5 text-xs text-[#9898A8]">
+              자막이 아직 생성되지 않았어요
+            </span>
+          )}
           {status === 'processing' && (
             <span className="flex items-center gap-1.5 text-xs text-[#F5A623]">
               <img src={duringIcon} alt="" className="w-3 h-3" />
@@ -135,6 +174,15 @@ export default function VideoCaptionPlayer({ postId, media }: Props) {
             >
               <img src={retryIcon} alt="" className="w-3 h-3" />
               {isRetrying ? '다시 시도 중...' : '다시 시도'}
+            </button>
+          ) : status === 'none' ? (
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="ml-auto flex items-center gap-1.5 rounded-full bg-black px-3 py-1.5 text-white text-xs flex-shrink-0 disabled:opacity-60"
+            >
+              {isGenerating ? '요청 중...' : '자막 생성하기'}
             </button>
           ) : (
             <button

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { IS_MOCK_API, toggleMockApi, type DisabilityType } from '../services/auth'
 
 interface Props {
@@ -15,6 +16,23 @@ interface NavItem {
 }
 
 export default function TestScreen({ onGoLogin, onGoKakaoSignup, onGoOnboarding, onGoHome }: Props) {
+  const [vibrateResult, setVibrateResult] = useState<string | null>(null)
+
+  // 알림 진동이 실제 기기에서 안 느껴진다는 문제를 진단하기 위한 버튼 — 탭한 그 순간(사용자 제스처)
+  // 안에서 바로 vibrate()를 호출해, 비동기 콜백(WS 알림 등)에서 호출할 때와 결과를 비교해볼 수 있다.
+  const handleVibrateTest = () => {
+    if (!('vibrate' in navigator)) {
+      setVibrateResult('이 브라우저는 Vibration API를 지원하지 않아요 (예: iOS Safari)')
+      return
+    }
+    const accepted = navigator.vibrate(200)
+    setVibrateResult(
+      accepted
+        ? '요청은 수락됐어요(true). 그래도 안 느껴지면 폰의 무음/진동 설정을 확인해보세요.'
+        : '브라우저가 요청을 거부했어요(false) — 탭한 직후인데도 거부됐다면 이 기기/브라우저에서는 진동 자체가 막혀있는 거예요.',
+    )
+  }
+
   const sections: { title: string; items: NavItem[] }[] = [
     {
       title: '인증 화면',
@@ -57,6 +75,19 @@ export default function TestScreen({ onGoLogin, onGoKakaoSignup, onGoOnboarding,
           </button>
         </div>
         <p className="text-sm text-[#757575]">ThisAbled — 백엔드 없이 UI 테스트용 화면</p>
+      </div>
+
+      {/* 진동 즉시 테스트 — 탭 제스처 안에서 바로 vibrate() 호출 */}
+      <div className="mb-8 rounded-2xl border border-[#EBEBEF] px-5 py-4">
+        <p className="text-xs font-semibold text-[#666666] mb-2">진동 즉시 테스트</p>
+        <button
+          type="button"
+          onClick={handleVibrateTest}
+          className="w-full rounded-2xl bg-[#4C7DFF] px-4 py-3 text-sm font-bold text-white active:bg-[#3D68E0]"
+        >
+          지금 바로 진동 테스트
+        </button>
+        {vibrateResult && <p className="mt-2 text-xs text-[#757575]">{vibrateResult}</p>}
       </div>
 
       {/* 섹션 목록 */}
