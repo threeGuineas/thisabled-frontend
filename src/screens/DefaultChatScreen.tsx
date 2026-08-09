@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import styles from './DefaultChatScreen.styles'
+import getStyles, { type ChatScreenTheme } from './DefaultChatScreen.styles'
 import BottomNav, { type Tab } from '../components/BottomNav'
 import DefaultChatRoomScreen from './DefaultChatRoomScreen'
 import {
@@ -38,6 +38,7 @@ interface Props {
   onTabChange: (tab: Tab) => void
   targetUser: ChatTargetUser | null
   onTargetUserConsumed: () => void
+  theme?: ChatScreenTheme
 }
 
 function formatListTime(iso: string): string {
@@ -66,7 +67,8 @@ function formatTime(iso: string): string {
   return `${ampm} ${h}:${String(minutes).padStart(2, '0')}`
 }
 
-export default function DefaultChatScreen({ onTabChange, targetUser, onTargetUserConsumed }: Props) {
+export default function DefaultChatScreen({ onTabChange, targetUser, onTargetUserConsumed, theme = 'default' }: Props) {
+  const styles = getStyles(theme)
   const [activeTab, setActiveTab] = useState<Tab>('chat')
   const [view, setView] = useState<ScreenView>('list')
   const [searchQuery, setSearchQuery] = useState('')
@@ -231,6 +233,7 @@ export default function DefaultChatScreen({ onTabChange, targetUser, onTargetUse
     return (
       <DefaultChatRoomScreen
         room={selectedRoom}
+        theme={theme}
         onBack={() => {
           setSelectedRoom(null)
           loadRooms()
@@ -353,7 +356,7 @@ export default function DefaultChatScreen({ onTabChange, targetUser, onTargetUse
           </>
         )}
 
-        <BottomNav variant="default" active={activeTab} onChange={handleTabChange} />
+        <BottomNav variant={theme === 'hearing' ? 'hearing' : 'default'} active={activeTab} onChange={handleTabChange} />
       </div>
     )
   }
@@ -459,7 +462,7 @@ export default function DefaultChatScreen({ onTabChange, targetUser, onTargetUse
         </div>
       )}
 
-      <BottomNav variant="default" active={activeTab} onChange={handleTabChange} />
+      <BottomNav variant={theme === 'hearing' ? 'hearing' : 'default'} active={activeTab} onChange={handleTabChange} />
     </div>
   )
 }

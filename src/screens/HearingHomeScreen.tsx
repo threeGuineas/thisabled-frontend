@@ -5,7 +5,7 @@ import NotificationBanner from '../components/NotificationBanner'
 import NotificationDetailScreen from './NotificationDetailScreen'
 import HearingPostDetailScreen from './HearingPostDetailScreen'
 import DefaultWriteScreen from './DefaultWriteScreen'
-import DefaultMyScreen from './DefaultMyScreen'
+import HearingMyScreen from './HearingMyScreen'
 import DefaultChatScreen from './DefaultChatScreen'
 import DefaultFriendScreen from './DefaultFriendScreen'
 import { useProfileModal } from '../hooks/useProfileModal'
@@ -91,9 +91,12 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
     }
   }, [])
 
+  // 마이페이지의 '화면 알림 배너' 토글은 서버(mode_settings.visual_alerts)에 저장되므로,
+  // 홈 탭으로 돌아올 때마다 다시 불러와 배너 표시 여부에 즉시 반영한다.
   useEffect(() => {
+    if (activeTab !== 'home') return
     getMe().then(setMe).catch(() => {})
-  }, [])
+  }, [activeTab])
 
   useEffect(() => {
     loadPosts(null, true)
@@ -134,7 +137,7 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
   }
 
   if (activeTab === 'friend') {
-    return <DefaultFriendScreen onTabChange={setActiveTab} />
+    return <DefaultFriendScreen onTabChange={setActiveTab} theme="hearing" />
   }
 
   if (activeTab === 'chat') {
@@ -143,12 +146,13 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
         onTabChange={setActiveTab}
         targetUser={chatTarget}
         onTargetUserConsumed={() => setChatTarget(null)}
+        theme="hearing"
       />
     )
   }
 
   if (activeTab === 'my') {
-    return <DefaultMyScreen onTabChange={setActiveTab} onLoggedOut={onLoggedOut} onModeChanged={onModeChanged} />
+    return <HearingMyScreen onTabChange={setActiveTab} onLoggedOut={onLoggedOut} onModeChanged={onModeChanged} />
   }
 
   if (showWrite) {
@@ -208,7 +212,9 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
         </div>
       </div>
 
-      <NotificationBanner unreadCount={unreadNotificationCount} onMoreClick={() => setShowNotifications(true)} />
+      {(me?.mode_settings.visual_alerts ?? true) && (
+        <NotificationBanner unreadCount={unreadNotificationCount} onMoreClick={() => setShowNotifications(true)} />
+      )}
 
       <div className={styles.filterContainer}>
         <div className={styles.filterInner}>

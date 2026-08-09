@@ -63,7 +63,7 @@ const styles = {
     colors.bg.gray04, typography.sm, 'text-black placeholder:text-[#9898A8]',
   ].join(' '),
   sendButton: 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 active:opacity-80',
-  sendButtonActive: colors.bg.yellow,
+  sendButtonActive: colors.bg.blue,
   sendButtonInactive: colors.bg.gray04,
   sendIcon: 'w-4 h-4',
   sendIconInactive: 'w-4 h-4 opacity-30',

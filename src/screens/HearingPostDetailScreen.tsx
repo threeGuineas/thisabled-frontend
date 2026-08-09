@@ -117,7 +117,7 @@ export default function HearingPostDetailScreen({ post, category, me, onBack, on
             aria-label={isAuthorMine ? undefined : `${authorNickname}님 프로필 보기`}
           >
             {!post.author.profile_image_url && isAuthorMine ? (
-              <div className={`${styles.avatarFallback} bg-[#FFD60A]`}>
+              <div className={`${styles.avatarFallback} bg-[#4C7DFF]`}>
                 {authorNickname[0].toUpperCase()}
               </div>
             ) : (
@@ -212,7 +212,7 @@ export default function HearingPostDetailScreen({ post, category, me, onBack, on
                       aria-label={isMine ? undefined : `${nickname}님 프로필 보기`}
                     >
                       {!comment.author.profile_image_url && isMine ? (
-                        <div className={`${styles.commentAvatarFallback} bg-[#FFD60A]`}>
+                        <div className={`${styles.commentAvatarFallback} bg-[#4C7DFF]`}>
                           {me!.nickname[0].toUpperCase()}
                         </div>
                       ) : (

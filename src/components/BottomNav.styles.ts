@@ -37,11 +37,11 @@ const styles = {
     ...shared,
     nav: [
       'fixed bottom-0 left-0 right-0',
-      'h-20 bg-white',
+      'h-20', colors.bg.blue01,
       'border-t', colors.border.gray03,
       'flex items-center',
     ].join(' '),
-    iconWrapperActive: [colors.bg.blue01, 'rounded-2xl px-4 py-1.5 flex items-center justify-center'].join(' '),
+    iconWrapperActive: [colors.bg.white, 'rounded-2xl px-4 py-1.5 flex items-center justify-center shadow-sm'].join(' '),
     labelActive: [typography.xs, typography.bold, colors.text.blue].join(' '),
     label: [typography.xs, typography.medium, colors.text.gray02].join(' '),
   },

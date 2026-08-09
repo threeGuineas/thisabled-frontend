@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import styles from './DefaultChatRoomScreen.styles'
+import getStyles, { type ChatRoomScreenTheme } from './DefaultChatRoomScreen.styles'
 import {
   getChatMessages,
   sendChatMessage,
@@ -23,6 +23,7 @@ const PAGE_LIMIT = 30
 
 interface Props {
   room: ChatRoom
+  theme?: ChatRoomScreenTheme
   onBack: () => void
 }
 
@@ -40,7 +41,8 @@ function formatDate(iso: string): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
 }
 
-export default function DefaultChatRoomScreen({ room, onBack }: Props) {
+export default function DefaultChatRoomScreen({ room, theme = 'default', onBack }: Props) {
+  const styles = getStyles(theme)
   const [currentRoom, setCurrentRoom] = useState<ChatRoom>(room)
 
   const [messageText, setMessageText] = useState('')

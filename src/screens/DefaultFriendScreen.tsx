@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import styles from './DefaultFriendScreen.styles'
+import getStyles, { type FriendScreenTheme } from './DefaultFriendScreen.styles'
 import BottomNav, { type Tab } from '../components/BottomNav'
 import {
   getFriends,
@@ -28,6 +28,7 @@ function avatarFor(author: Author): string {
 
 interface Props {
   onTabChange: (tab: Tab) => void
+  theme?: FriendScreenTheme
 }
 
 type ConfirmAction = 'accept' | 'decline' | 'cancel' | 'unfriend' | 'block'
@@ -39,7 +40,8 @@ interface ConfirmTarget {
   action: ConfirmAction
 }
 
-export default function DefaultFriendScreen({ onTabChange }: Props) {
+export default function DefaultFriendScreen({ onTabChange, theme = 'default' }: Props) {
+  const styles = getStyles(theme)
   const [activeTab, setActiveTab] = useState<Tab>('friend')
   const [view, setView] = useState<ScreenView>('list')
 
@@ -488,7 +490,7 @@ export default function DefaultFriendScreen({ onTabChange }: Props) {
         />
       )}
 
-      <BottomNav variant="default" active={activeTab} onChange={handleTabChange} />
+      <BottomNav variant={theme === 'hearing' ? 'hearing' : 'default'} active={activeTab} onChange={handleTabChange} />
     </div>
   )
 }
