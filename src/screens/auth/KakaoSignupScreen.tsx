@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import styles from './KakaoSignupScreen.styles'
 import backIcon from '../../assets/images/back.svg'
-import checkIcon from '../../assets/images/check.svg'
+import checkIcon from '../../assets/images/check-y.svg'
 import plusIcon from '../../assets/images/plus.svg'
 import avatarPlaceholderIcon from '../../assets/images/mypage.svg'
 import { kakaoSignup, tokenStorage, type DisabilityType } from '../../services/auth'

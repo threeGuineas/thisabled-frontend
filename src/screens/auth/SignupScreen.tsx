@@ -3,7 +3,7 @@ import styles from './SignupScreen.styles'
 import backIcon from '../../assets/images/back.svg'
 import eyeOpen from '../../assets/images/eye-open.svg'
 import eyeClosed from '../../assets/images/eye-closed.svg'
-import checkIcon from '../../assets/images/check.svg'
+import checkIcon from '../../assets/images/check-y.svg'
 import { register, tokenStorage, type DisabilityType } from '../../services/auth'
 import { setMode } from '../../services/users'
 
