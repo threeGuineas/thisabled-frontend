@@ -12,7 +12,7 @@ import {
   sendFriendRequest,
   type FriendRequest,
 } from '../../services/friends'
-import { getRecommendations, type RecommendedPerson } from '../../services/recommendations'
+import { getRecommendations, RECOMMENDATION_MESSAGE, type RecommendedPerson } from '../../services/recommendations'
 import { type Author } from '../../services/posts'
 import BlindUserProfileModal, { type ProfileModalUser } from '../../components/BlindUserProfileModal'
 import { avatarUrlFor } from '../../utils/avatar'
@@ -240,11 +240,11 @@ export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
             ) : recommendations.length === 0 ? (
               <div className={styles.emptyState}>
                 <span className={styles.emptyText}>
-                  {recommendMessage === '지금은 추천을 만들 수 없어요. 잠시 후 다시 시도해 주세요'
+                  {recommendMessage === RECOMMENDATION_MESSAGE.temporary
                     ? recommendMessage
                     : '관심사를 등록하면 나와 잘 맞는 친구를 추천해드려요.'}
                 </span>
-                {recommendMessage === '지금은 추천을 만들 수 없어요. 잠시 후 다시 시도해 주세요' && (
+                {recommendMessage === RECOMMENDATION_MESSAGE.temporary && (
                   <button type="button" onClick={loadRecommendations} className={styles.retryButton}>
                     다시 시도
                   </button>
@@ -257,29 +257,43 @@ export default function BlindFriendScreen({ onTabChange, onOpenChat }: Props) {
                     const sent = sentRequestIds.has(person.user_id)
                     return (
                       <div key={person.user_id} className={styles.recommendCard}>
-                        <img
-                          src={avatarFor({ id: person.user_id, nickname: person.nickname, profile_image_url: person.profile_image_url })}
-                          alt={`${person.nickname} 프로필`}
-                          className={styles.recommendAvatar}
-                        />
-                        <span className={styles.recommendNickname}>{person.nickname}</span>
-                        <span className={styles.recommendBio}>{person.bio ?? person.reasons[0] ?? ''}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleSendRequest(person.user_id)}
-                          disabled={sent}
-                          className={styles.recommendAddButton}
-                          aria-label={sent ? `${person.nickname}님에게 친구 요청 보냄` : `${person.nickname}님에게 친구 요청 보내기`}
-                        >
-                          {sent ? (
-                            <span className={styles.recommendAddText}>요청됨</span>
-                          ) : (
-                            <>
-                              <img src={plusIcon} alt="" className={styles.recommendAddIcon} />
-                              <span className={styles.recommendAddText}>친구 추가</span>
-                            </>
+                        <div className={styles.recommendProfile}>
+                          <img
+                            src={avatarFor({ id: person.user_id, nickname: person.nickname, profile_image_url: person.profile_image_url })}
+                            alt={`${person.nickname} 프로필`}
+                            className={styles.recommendAvatar}
+                          />
+                          <span className={styles.recommendNickname}>{person.nickname}</span>
+                          {person.bio && <span className={styles.recommendBio}>{person.bio}</span>}
+                        </div>
+                        <div className={styles.recommendActions}>
+                          {person.reasons.length > 0 && (
+                            <div className={styles.recommendReasonList}>
+                              {person.reasons.map((reason) => (
+                                <span key={reason} className={styles.recommendReason}>
+                                  <span className={styles.recommendReasonDot} aria-hidden="true" />
+                                  {reason}
+                                </span>
+                              ))}
+                            </div>
                           )}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSendRequest(person.user_id)}
+                            disabled={sent}
+                            className={styles.recommendAddButton}
+                            aria-label={sent ? `${person.nickname}님에게 친구 요청 보냄` : `${person.nickname}님에게 친구 요청 보내기`}
+                          >
+                            {sent ? (
+                              <span className={styles.recommendAddText}>요청됨</span>
+                            ) : (
+                              <>
+                                <img src={plusIcon} alt="" className={styles.recommendAddIcon} />
+                                <span className={styles.recommendAddText}>친구 추가</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )
                   })}

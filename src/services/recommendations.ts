@@ -15,6 +15,12 @@ export interface RecommendationListOut {
   message: string | null
 }
 
+// 백엔드가 items: []와 함께 내려주는 안내 메시지 — 문서(recommendation-frontend-integration.md) 권장대로 상수로 관리
+export const RECOMMENDATION_MESSAGE = {
+  notEnough: '추천 정보가 부족합니다',
+  temporary: '지금은 추천을 만들 수 없어요. 잠시 후 다시 시도해 주세요',
+} as const
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 const mockRecommendations: RecommendedPerson[] = [
@@ -44,6 +50,15 @@ const mockRecommendations: RecommendedPerson[] = [
     tags: ['book_독서'],
     score: 0.8,
     reasons: ['관심사가 비슷해요'],
+  },
+  {
+    user_id: 'mock-rec-4',
+    nickname: '조용한숲',
+    bio: null,
+    profile_image_url: null,
+    tags: ['book_독서'],
+    score: 0.77,
+    reasons: ['관심사가 비슷해요', '공통 친구가 있어요'],
   },
 ]
 
