@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react'
-import OnboardingScreen from './screens/OnboardingScreen'
-import LoginScreen from './screens/LoginScreen'
-import KakaoSignupScreen from './screens/KakaoSignupScreen'
-import InterestTagsScreen from './screens/InterestTagsScreen'
-import BlindHomeScreen from './screens/BlindHomeScreen'
-import DefaultHomeScreen from './screens/DefaultHomeScreen'
-import TestScreen from './screens/TestScreen'
+import OnboardingScreen from './screens/auth/OnboardingScreen'
+import LoginScreen from './screens/auth/LoginScreen'
+import KakaoSignupScreen from './screens/auth/KakaoSignupScreen'
+import InterestTagsScreen from './screens/auth/InterestTagsScreen'
+import BlindHomeScreen from './screens/blind/BlindHomeScreen'
+import DefaultHomeScreen from './screens/default/DefaultHomeScreen'
+import HearingHomeScreen from './screens/hearing/HearingHomeScreen'
+import TestScreen from './screens/auth/TestScreen'
 import Toast from './components/Toast'
 import { type DisabilityType, tokenStorage } from './services/auth'
 import { setMode } from './services/users'
 
-type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome' | 'defaultHome'
+type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome' | 'defaultHome' | 'hearingHome'
 
-const homeScreenFor = (mode: DisabilityType): Screen => (mode === 'default' ? 'defaultHome' : 'blindHome')
+const homeScreenFor = (mode: DisabilityType): Screen => {
+  if (mode === 'default') return 'defaultHome'
+  if (mode === 'hearing') return 'hearingHome'
+  return 'blindHome'
+}
 
 // 'existingUser': 로그인 후 모드 미설정 → 선택 즉시 PUT /users/me/mode 호출
 // 'newSignup': 카카오 신규가입 전 모드 선택 → KakaoSignupScreen으로 전달, 가입 시 함께 제출
@@ -141,6 +146,7 @@ function App() {
     if (screen === 'interestTags') return <InterestTagsScreen onDone={handleInterestTagsDone} />
     if (screen === 'blindHome') return <BlindHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
     if (screen === 'defaultHome') return <DefaultHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
+    if (screen === 'hearingHome') return <HearingHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
     return (
       <LoginScreen
         onLogin={handleLoginSuccess}

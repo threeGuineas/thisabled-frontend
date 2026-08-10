@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { transcribeAudio } from '../services/voice'
+import { vibrate } from '../utils/haptics'
 
 export type VoiceState = 'idle' | 'recording' | 'transcribing' | 'error'
 
@@ -19,10 +20,6 @@ function speak(text: string): Promise<void> {
     utterance.onerror = () => { clearTimeout(timer); resolve() }
     speechSynthesis.speak(utterance)
   })
-}
-
-function vibrate(pattern: number | number[]) {
-  navigator.vibrate?.(pattern)
 }
 
 // 무음이 이 시간(ms) 이상 지속되면 자동으로 녹음을 종료한다.

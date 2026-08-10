@@ -13,7 +13,7 @@ export interface ChatSocketHandle {
 
 // dev: vite proxy가 /api를 ws:true로 백엔드에 전달하므로 현재 origin 기준 상대 경로 사용.
 // prod: 정적 빌드엔 프록시가 없으므로 백엔드 주소를 ws(s)://로 변환해 직접 연결.
-function wsUrl(): string {
+export function wsUrl(): string {
   if (import.meta.env.PROD) {
     const backend = import.meta.env.VITE_BACKEND_URL as string
     return backend.replace(/^http/, 'ws')

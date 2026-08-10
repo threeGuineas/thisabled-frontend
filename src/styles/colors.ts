@@ -1,6 +1,8 @@
 const colors = {
   yellow: '#FFD60A',
   yellow01: '#FFFAE1',
+  blue: '#4C7DFF',
+  blue01: '#EAF0FF',
   gray01: '#666666',
   gray02: '#757575',
   gray03: '#EBEBEF',
@@ -13,6 +15,8 @@ const colors = {
   bg: {
     yellow: 'bg-[#FFD60A]',
     yellow01: 'bg-[#FFFAE1]',
+    blue: 'bg-[#4C7DFF]',
+    blue01: 'bg-[#EAF0FF]',
     gray01: 'bg-[#666666]',
     gray02: 'bg-[#757575]',
     gray03: 'bg-[#EBEBEF]',
@@ -22,6 +26,7 @@ const colors = {
   },
   text: {
     yellow: 'text-[#FFD60A]',
+    blue: 'text-[#4C7DFF]',
     gray01: 'text-[#666666]',
     gray02: 'text-[#757575]',
     gray03: 'text-[#EBEBEF]',
@@ -31,6 +36,7 @@ const colors = {
   },
   border: {
     yellow: 'border-[#FFD60A]',
+    blue: 'border-[#4C7DFF]',
     gray01: 'border-[#666666]',
     gray02: 'border-[#757575]',
     gray03: 'border-[#EBEBEF]',
@@ -40,6 +46,7 @@ const colors = {
   },
   active: {
     yellow: 'active:bg-[#E6C009]',
+    blue: 'active:bg-[#3D68E0]',
     white: 'active:bg-[#FFFFFF]',
     black: 'active:bg-[#000000]',
   },

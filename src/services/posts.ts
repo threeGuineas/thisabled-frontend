@@ -1,4 +1,5 @@
 import { authedRequest, IS_MOCK } from './auth'
+import { type CaptionSegment } from '../utils/vtt'
 
 export interface Author {
   id: string | null
@@ -6,7 +7,8 @@ export interface Author {
   profile_image_url: string | null
 }
 
-export type DescriptionStatus = 'none' | 'processing' | 'done' | 'failed'
+export type AiStatus = 'none' | 'processing' | 'done' | 'failed'
+export type DescriptionStatus = AiStatus
 
 export interface PostMediaItem {
   id: string
@@ -15,8 +17,8 @@ export interface PostMediaItem {
   sort_order: number
   description: string | null
   description_status: DescriptionStatus
-  caption: unknown[] | null
-  caption_status: string
+  caption: CaptionSegment[] | null
+  caption_status: AiStatus
 }
 
 export interface Post {
@@ -90,11 +92,25 @@ const MOCK_VISION_DESCRIPTIONS = [
   '빵집에서 찍은 사진입니다. 갓 구운 크루아상이 접시에 담겨 있고, 배경에는 따뜻한 카페 분위기가 느껴집니다.',
 ]
 
+// mock 모드에서 CAPTION-01(영상 자막) 화면을 확인할 수 있도록 사용하는 샘플 영상/세그먼트.
+// 실제 백엔드는 게시(publish) 시점에 자막 생성이 끝나 있어야 하므로(processing이면 409) 게시된
+// 피드에는 원래 done/failed만 노출되지만, FE에서 "방금 올린 영상" 자막 생성 중 UI를 미리 볼 수 있도록
+// mock 피드에는 예외적으로 processing 상태인 영상도 하나 섞어 둔다.
+// 세그먼트 종료 시각은 샘플 영상 길이(약 5초)를 넘지 않도록 맞춘다 — 넘으면 마지막 자막이 재생되지 않는다.
+const MOCK_VIDEO_URL = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
+const MOCK_CAPTION_SEGMENTS: CaptionSegment[] = [
+  { start: 0, end: 1.6, text: '안녕하세요, 오늘 소개할 영상입니다.' },
+  { start: 1.6, end: 3.4, text: '청각장애인을 위한 자막 기능을 시연합니다.' },
+  { start: 3.4, end: 5.0, text: '시청해주셔서 감사합니다.' },
+]
+const MOCK_CAPTION_DEMO_CONTENT = '영상 자막이 정상적으로 잘 나오는지 확인해보는 예시 게시물이에요. 재생 버튼을 눌러서 자막을 켜보세요!'
+
 // mock 모드에서 VISION-01(사진 설명) 백그라운드 생성을 흉내내기 위한 상태 저장소.
 // 실제 백엔드에는 전용 폴링 API가 없으므로 GET /posts/{id} 재조회로 상태 변화를 확인해야 하고,
 // mock도 동일하게 getPost() 재호출 시점에 processing → done으로 전환되도록 만든다.
 const mockPostStore = new Map<string, Post>()
 const mockDescriptionReadyAt = new Map<string, number>()
+const mockCaptionReadyAt = new Map<string, number>()
 const mockCommentStore = new Map<string, Comment[]>()
 
 function mockDescriptionFor(mediaId: string): string {
@@ -104,7 +120,36 @@ function mockDescriptionFor(mediaId: string): string {
 }
 
 function mockMedia(idx: number): PostMediaItem[] {
-  if (idx % 3 === 2) return []
+  // 청각모드 자막(CAPTION-01)이 정상 동작하는 예시를 스크롤 없이 바로 확인할 수 있도록,
+  // 피드 맨 앞(idx 0)은 실패 없이 항상 자막 생성이 완료된 영상으로 고정한다.
+  if (idx === 0) {
+    return [{
+      id: crypto.randomUUID(),
+      media_type: 'video',
+      url: MOCK_VIDEO_URL,
+      sort_order: 0,
+      description: null,
+      description_status: 'none',
+      caption: MOCK_CAPTION_SEGMENTS,
+      caption_status: 'done',
+    }]
+  }
+  if (idx % 4 === 2) return []
+  if (idx % 4 === 3) {
+    // 게시글 동영상을 딱 올린 직후 — 자막을 아직 요청하지 않은 상태를 미리보기 위한 예시.
+    // VideoCaptionPlayer의 "자막 생성하기" 버튼을 눌러야 processing → done으로 넘어간다.
+    const notGenerated = idx % 8 === 3
+    return [{
+      id: crypto.randomUUID(),
+      media_type: 'video',
+      url: MOCK_VIDEO_URL,
+      sort_order: 0,
+      description: null,
+      description_status: 'none',
+      caption: notGenerated ? null : MOCK_CAPTION_SEGMENTS,
+      caption_status: notGenerated ? 'none' : 'done',
+    }]
+  }
   const id = crypto.randomUUID()
   mockDescriptionReadyAt.set(id, Date.now() + 3000)
   return [{
@@ -126,6 +171,20 @@ function resolveMockDescriptions(post: Post): Post {
     const readyAt = mockDescriptionReadyAt.get(m.id)
     if (!readyAt || Date.now() < readyAt) return m
     return { ...m, description_status: 'done' as const, description: mockDescriptionFor(m.id) }
+  })
+  const resolved = { ...post, media }
+  mockPostStore.set(post.id, resolved)
+  return resolved
+}
+
+// "자막 생성하기" 버튼으로 시작된 처리 중 자막 중 준비 시각이 지난 것을 done으로 전환
+function resolveMockCaptions(post: Post): Post {
+  const media = post.media.map((m) => {
+    if (m.caption_status !== 'processing') return m
+    const readyAt = mockCaptionReadyAt.get(m.id)
+    if (!readyAt || Date.now() < readyAt) return m
+    mockCaptionReadyAt.delete(m.id)
+    return { ...m, caption_status: 'done' as const, caption: MOCK_CAPTION_SEGMENTS }
   })
   const resolved = { ...post, media }
   mockPostStore.set(post.id, resolved)
@@ -165,7 +224,7 @@ const mockPosts = {
           nickname: MOCK_NICKNAMES[idx % MOCK_NICKNAMES.length],
           profile_image_url: null,
         },
-        content: MOCK_CONTENTS[idx % MOCK_CONTENTS.length],
+        content: idx === 0 ? MOCK_CAPTION_DEMO_CONTENT : MOCK_CONTENTS[idx % MOCK_CONTENTS.length],
         status: 'published',
         media: mockMedia(idx),
         like_count: idx % 4,
@@ -188,7 +247,17 @@ const mockPosts = {
     await sleep(400)
     const post = mockPostStore.get(postId)
     if (!post) throw { status: 404, detail: '게시물을 찾을 수 없습니다.' }
-    return resolveMockDescriptions(post)
+    return resolveMockCaptions(resolveMockDescriptions(post))
+  },
+  async requestCaptionGeneration(postId: string, mediaId: string): Promise<Post> {
+    await sleep(300)
+    const post = mockPostStore.get(postId)
+    if (!post) throw { status: 404, detail: '게시물을 찾을 수 없습니다.' }
+    const media = post.media.map((m) => (m.id === mediaId ? { ...m, caption_status: 'processing' as const } : m))
+    const updated = { ...post, media }
+    mockPostStore.set(postId, updated)
+    mockCaptionReadyAt.set(mediaId, Date.now() + 3000)
+    return updated
   },
   async getComments(postId: string): Promise<CommentsPage> {
     await sleep(400)
@@ -264,6 +333,14 @@ export async function getFeed(cursor: string | null = null, limit = 20): Promise
 export async function getPost(postId: string): Promise<Post> {
   if (IS_MOCK) return mockPosts.getPost(postId)
   return authedRequest<Post>(`/api/v1/posts/${postId}`)
+}
+
+// 실제 백엔드는 영상 업로드 시점(POST /media/videos)에 자막 생성이 자동으로 시작돼 별도의
+// 수동 생성 API가 없다 — mock 모드에서 "자막 생성하기" 버튼을 눌러 생성 과정을 미리 볼 수 있도록
+// FE 전용으로 추가한 트리거이며, 실제 API 모드에서는 호출될 일이 없다(피드 영상은 항상 done/failed).
+export async function requestCaptionGeneration(postId: string, mediaId: string): Promise<Post> {
+  if (IS_MOCK) return mockPosts.requestCaptionGeneration(postId, mediaId)
+  return getPost(postId)
 }
 
 export async function likePost(postId: string): Promise<LikeResult> {
