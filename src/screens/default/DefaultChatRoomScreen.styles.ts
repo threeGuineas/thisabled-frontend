@@ -38,7 +38,8 @@ export default function getStyles(theme: ChatRoomScreenTheme = 'default') {
     loadingMoreRow: 'flex items-center justify-center py-2',
     loadingMoreText: [typography.xs, typography.regular, 'text-[#9898A8]'].join(' '),
 
-    messageList: 'flex-1 flex flex-col px-4 gap-3 py-3 pb-28 overflow-y-auto',
+    // 발달모드는 입력바 위에 "대화가 어려우면 눌러보세요" 배너가 한 줄 더 있어 하단 여백을 더 확보한다
+    messageList: ['flex-1 flex flex-col px-4 gap-3 py-3 overflow-y-auto', isDev ? 'pb-40' : 'pb-28'].join(' '),
 
     // 상대 메시지
     otherRow: 'flex items-end gap-2 max-w-[85%]',

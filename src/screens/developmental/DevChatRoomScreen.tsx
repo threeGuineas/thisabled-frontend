@@ -16,6 +16,7 @@ import { useAiNotice } from '../../hooks/useAiNotice'
 import AiNoticeModal from '../../components/AiNoticeModal'
 import { avatarUrlFor } from '../../utils/avatar'
 import backIcon from '../../assets/images/back.svg'
+import chatIcon from '../../assets/images/chat.svg'
 import sendIcon from '../../assets/images/send.svg'
 import sendGIcon from '../../assets/images/send-g.svg'
 
@@ -350,16 +351,16 @@ export default function DevChatRoomScreen({ room, onBack }: Props) {
 
       {canSendText ? (
         <div className={styles.inputBarWrapper}>
+          <button
+            type="button"
+            onClick={handleOpenAiPanel}
+            className={[colors.bg.green01, 'flex w-full items-center justify-center gap-2 px-4 py-3 active:opacity-80'].join(' ')}
+          >
+            <img src={chatIcon} alt="" className="w-5 h-5" />
+            <span className={[typography.base, typography.bold, colors.text.green].join(' ')}>대화가 어려우면 눌러보세요</span>
+          </button>
           {sendError && <p className={styles.sendError}>{sendError}</p>}
           <div className={styles.inputBar}>
-            <button
-              type="button"
-              onClick={handleOpenAiPanel}
-              className={[colors.bg.green01, 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0'].join(' ')}
-              aria-label="AI 도움 받기"
-            >
-              <span className={[typography.xs, typography.bold, colors.text.green].join(' ')}>AI</span>
-            </button>
             <div className={styles.textInputWrapper}>
               <textarea
                 rows={1}
