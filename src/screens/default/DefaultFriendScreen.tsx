@@ -489,7 +489,7 @@ export default function DefaultFriendScreen({ onTabChange, theme = 'default' }: 
         <BlindUserProfileModal
           user={profileFriend}
           variant="friend"
-          theme="default"
+          theme={theme === 'developmental' ? 'developmental' : 'default'}
           onClose={() => setProfileFriend(null)}
           onUnfriend={() => {
             const { id, nickname } = profileFriend
@@ -504,7 +504,7 @@ export default function DefaultFriendScreen({ onTabChange, theme = 'default' }: 
         />
       )}
 
-      <BottomNav variant={theme === 'hearing' ? 'hearing' : 'default'} active={activeTab} onChange={handleTabChange} />
+      <BottomNav variant={theme === 'hearing' || theme === 'developmental' ? theme : 'default'} active={activeTab} onChange={handleTabChange} />
     </div>
   )
 }

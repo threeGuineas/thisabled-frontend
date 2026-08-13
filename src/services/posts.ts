@@ -196,6 +196,10 @@ const mockPosts = {
     await sleep(800)
     return files.map(() => ({ media_id: crypto.randomUUID(), url: '/uploads/mock-image.jpg' }))
   },
+  async uploadVideo(): Promise<UploadedMedia> {
+    await sleep(1000)
+    return { media_id: crypto.randomUUID(), url: MOCK_VIDEO_URL }
+  },
   async createPost(content: string): Promise<Post> {
     await sleep(600)
     return {
@@ -311,6 +315,15 @@ export async function uploadImages(files: File[]): Promise<UploadedMedia[]> {
     body: formData,
   })
   return items
+}
+
+// mp4/webm/quicktime, 200MB 이하, 3분 이하(durationSeconds) — 업로드 시점에 자막 생성이 자동 시작된다
+export async function uploadVideo(file: File, durationSeconds: number): Promise<UploadedMedia> {
+  if (IS_MOCK) return mockPosts.uploadVideo()
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('duration_seconds', String(durationSeconds))
+  return authedRequest<UploadedMedia>('/api/v1/media/videos', { method: 'POST', body: formData })
 }
 
 export async function createPost(content: string, mediaIds: string[] = []): Promise<Post> {

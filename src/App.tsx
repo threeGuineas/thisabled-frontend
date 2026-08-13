@@ -6,16 +6,18 @@ import InterestTagsScreen from './screens/auth/InterestTagsScreen'
 import BlindHomeScreen from './screens/blind/BlindHomeScreen'
 import DefaultHomeScreen from './screens/default/DefaultHomeScreen'
 import HearingHomeScreen from './screens/hearing/HearingHomeScreen'
+import DevHomeScreen from './screens/developmental/DevHomeScreen'
 import TestScreen from './screens/auth/TestScreen'
 import Toast from './components/Toast'
 import { type DisabilityType, tokenStorage } from './services/auth'
 import { setMode } from './services/users'
 
-type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome' | 'defaultHome' | 'hearingHome'
+type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome' | 'defaultHome' | 'hearingHome' | 'developmentalHome'
 
 const homeScreenFor = (mode: DisabilityType): Screen => {
   if (mode === 'default') return 'defaultHome'
   if (mode === 'hearing') return 'hearingHome'
+  if (mode === 'developmental') return 'developmentalHome'
   return 'blindHome'
 }
 
@@ -147,6 +149,7 @@ function App() {
     if (screen === 'blindHome') return <BlindHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
     if (screen === 'defaultHome') return <DefaultHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
     if (screen === 'hearingHome') return <HearingHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
+    if (screen === 'developmentalHome') return <DevHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
     return (
       <LoginScreen
         onLogin={handleLoginSuccess}

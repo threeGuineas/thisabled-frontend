@@ -4,7 +4,7 @@ import BlindUserProfileModal, { type ProfileModalUser } from '../components/Blin
 // 홈 피드/댓글 등 여러 화면에서 동일하게 쓰이는 "작성자 프로필 팝업" 열기/닫기 상태와
 // 렌더링을 한곳에 모은 훅. onMessage는 팝업의 '메시지 보내기'를 눌렀을 때, 대상 유저 정보와 함께 호출된다.
 // theme: 팝업 배경 톤 — 기본화면에서는 'default'(흰 배경)를 넘겨준다.
-export function useProfileModal(onMessage: (user: ProfileModalUser) => void, theme: 'blind' | 'default' = 'blind') {
+export function useProfileModal(onMessage: (user: ProfileModalUser) => void, theme: 'blind' | 'default' | 'developmental' = 'blind') {
   const [profileUser, setProfileUser] = useState<ProfileModalUser | null>(null)
 
   const profileModal = profileUser ? (
