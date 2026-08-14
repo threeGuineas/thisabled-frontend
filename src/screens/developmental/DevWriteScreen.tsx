@@ -124,7 +124,7 @@ export default function DevWriteScreen({ onBack }: Props) {
   }
 
   const applySuggestion = (suggestion: string) => {
-    setContent(suggestion)
+    setContent((prev) => (prev ? `${prev} ${suggestion}` : suggestion))
     setSuggestions([])
   }
 
