@@ -8,6 +8,14 @@ type Phase = 'idle' | 'submitting' | 'waiting-caption' | 'caption-failed'
 // 하는 대신 이 총 대기 한도(3분) 안에서는 자동으로 폴링을 이어간다.
 const MAX_CAPTION_WAIT_MS = 3 * 60 * 1000
 
+// 서버 에러는 {status, detail} 형태로 던져진다 — 사용자가 문의할 때 재현 가능하도록
+// 메시지에 오류 코드를 함께 노출한다.
+function formatError(err: unknown, fallback: string): string {
+  const e = err as { status?: number; detail?: string }
+  const message = e.detail ?? fallback
+  return e.status ? `${message} (오류 코드: ${e.status})` : message
+}
+
 // 영상 게시물은 텍스트/사진과 경로가 완전히 다르다(POST /media/videos가 자체적으로
 // processing 드래프트 Post를 만들고, POST /posts/{id}/publish로 공개해야 한다 — POST /posts에
 // 영상 media_id를 media_ids로 넣으면 400). 이 훅이 업로드→본문 채우기→자막 폴링→게시까지 묶는다.
@@ -55,8 +63,7 @@ export function useVideoPost() {
       await updatePost(uploaded.post_id, content)
       return await finishWithStatus(uploaded.post_id, uploaded.caption_status)
     } catch (err: unknown) {
-      const e = err as { detail?: string }
-      setError(e.detail ?? '게시에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setError(formatError(err, '게시에 실패했어요. 잠시 후 다시 시도해주세요.'))
       setPhase('idle')
       return null
     }
@@ -72,8 +79,7 @@ export function useVideoPost() {
       await retryCaption(postId)
       return await finishWithStatus(postId, 'processing')
     } catch (err: unknown) {
-      const e = err as { detail?: string }
-      setError(e.detail ?? '자막 재시도에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setError(formatError(err, '자막 재시도에 실패했어요. 잠시 후 다시 시도해주세요.'))
       setPhase('caption-failed')
       return null
     }
@@ -88,8 +94,7 @@ export function useVideoPost() {
       setPhase('idle')
       return post
     } catch (err: unknown) {
-      const e = err as { detail?: string }
-      setError(e.detail ?? '게시에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setError(formatError(err, '게시에 실패했어요. 잠시 후 다시 시도해주세요.'))
       setPhase('idle')
       return null
     }
