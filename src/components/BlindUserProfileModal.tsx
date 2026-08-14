@@ -14,7 +14,7 @@ export interface ProfileModalUser {
 interface Props {
   user: ProfileModalUser
   variant?: 'add' | 'friend'
-  theme?: 'blind' | 'default'
+  theme?: 'blind' | 'default' | 'developmental'
   onClose: () => void
   onMessage?: () => void
   onUnfriend?: () => void

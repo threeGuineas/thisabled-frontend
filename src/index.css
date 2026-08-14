@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 html, body, #root {
-  background-color: #000;
+  background-color: #fff;
 }
 
 /* 고대비 모드: 개별 컴포넌트의 색상 클래스를 일일이 덮어쓰지 않고, 화면 전체에

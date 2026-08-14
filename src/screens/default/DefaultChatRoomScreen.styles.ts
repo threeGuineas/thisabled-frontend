@@ -1,14 +1,16 @@
 import typography from '../../styles/typography'
 import colors from '../../styles/colors'
 
-export type ChatRoomScreenTheme = 'default' | 'hearing'
+export type ChatRoomScreenTheme = 'default' | 'hearing' | 'developmental'
 
 export default function getStyles(theme: ChatRoomScreenTheme = 'default') {
-  const accentBg = theme === 'hearing' ? colors.bg.blue : colors.bg.yellow
-  const accentReadText = theme === 'hearing' ? 'text-[#4C7DFF]' : 'text-[#FFD60A]'
+  const accentBg = theme === 'hearing' ? colors.bg.blue : theme === 'developmental' ? colors.bg.green : colors.bg.yellow
+  const accentReadText = theme === 'hearing' ? 'text-[#4C7DFF]' : theme === 'developmental' ? 'text-[#22B07D]' : 'text-[#FFD60A]'
+  // 발달장애 모드(DEV-01) — 말풍선 글자와 입력창을 다른 모드보다 크게 키운다
+  const isDev = theme === 'developmental'
 
   return {
-    container: [colors.bg.gray03, 'min-h-screen flex flex-col'].join(' '),
+    container: [isDev ? 'bg-[#F4FBF7]' : colors.bg.gray03, 'min-h-screen flex flex-col'].join(' '),
 
     header: [colors.bg.white, 'flex items-center gap-3 px-4 py-3 shadow-sm relative z-10'].join(' '),
     backButton: 'w-9 h-9 -ml-1 rounded-full flex items-center justify-center flex-shrink-0 active:bg-[#F7F7F9]',
@@ -36,7 +38,8 @@ export default function getStyles(theme: ChatRoomScreenTheme = 'default') {
     loadingMoreRow: 'flex items-center justify-center py-2',
     loadingMoreText: [typography.xs, typography.regular, 'text-[#9898A8]'].join(' '),
 
-    messageList: 'flex-1 flex flex-col px-4 gap-3 py-3 pb-28 overflow-y-auto',
+    // 발달모드는 입력바 위에 "대화가 어려우면 눌러보세요" 배너가 한 줄 더 있어 하단 여백을 더 확보한다
+    messageList: ['flex-1 flex flex-col px-4 gap-3 py-3 overflow-y-auto', isDev ? 'pb-40' : 'pb-28'].join(' '),
 
     // 상대 메시지
     otherRow: 'flex items-end gap-2 max-w-[85%]',
@@ -45,7 +48,7 @@ export default function getStyles(theme: ChatRoomScreenTheme = 'default') {
     otherName: [typography.xs, typography.medium, 'text-[#757575]'].join(' '),
     otherBubbleRow: 'flex items-end gap-1.5',
     otherBubble: [colors.bg.white, 'rounded-2xl rounded-bl-sm px-3.5 py-2.5 shadow-sm'].join(' '),
-    otherText: [typography.sm, typography.regular, 'text-black leading-relaxed whitespace-pre-wrap break-words'].join(' '),
+    otherText: [isDev ? typography.base : typography.sm, typography.regular, 'text-black leading-relaxed whitespace-pre-wrap break-words'].join(' '),
     otherTime: [typography.xs, typography.regular, 'text-[#B3B3BD] flex-shrink-0 mb-0.5'].join(' '),
 
     // 내 메시지
@@ -55,7 +58,7 @@ export default function getStyles(theme: ChatRoomScreenTheme = 'default') {
     myReadText: [typography.xs, typography.bold, accentReadText].join(' '),
     myTime: [typography.xs, typography.regular, 'text-[#B3B3BD]'].join(' '),
     myBubble: [accentBg, 'rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm'].join(' '),
-    myText: [typography.sm, typography.regular, 'text-black leading-relaxed whitespace-pre-wrap break-words'].join(' '),
+    myText: [isDev ? typography.base : typography.sm, typography.regular, isDev ? 'text-white' : 'text-black', 'leading-relaxed whitespace-pre-wrap break-words'].join(' '),
 
     messageImage: 'max-w-full rounded-2xl object-contain',
     messageVideo: 'max-w-full rounded-2xl',
@@ -70,7 +73,7 @@ export default function getStyles(theme: ChatRoomScreenTheme = 'default') {
     confirmOverlay: 'fixed inset-0 bg-black/40 z-40',
     confirmModal: 'fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl',
     confirmImage: 'w-full max-h-60 object-contain rounded-2xl mb-5',
-    confirmText: [typography.base, typography.bold, 'text-black text-center'].join(' '),
+    confirmText: [isDev ? typography.lg : typography.base, typography.bold, 'text-black text-center'].join(' '),
     confirmError: [typography.xs, typography.regular, 'mt-1 text-red-500 text-center'].join(' '),
     confirmButtons: 'flex items-center gap-3 mt-5',
     confirmNoButton: [
@@ -94,7 +97,7 @@ export default function getStyles(theme: ChatRoomScreenTheme = 'default') {
     textInputWrapper: [colors.bg.gray04, 'flex-1 rounded-full px-4 py-2.5 min-w-0'].join(' '),
     textInput: [
       'w-full bg-transparent outline-none text-black placeholder:text-[#9898A8] resize-none max-h-24',
-      typography.sm, typography.regular,
+      isDev ? typography.base : typography.sm, typography.regular,
     ].join(' '),
     sendButton: 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-40',
     sendButtonActive: [accentBg, 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0'].join(' '),
