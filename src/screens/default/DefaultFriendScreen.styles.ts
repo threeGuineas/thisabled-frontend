@@ -9,7 +9,7 @@ export default function getStyles(theme: FriendScreenTheme = 'default') {
   const isDev = theme === 'developmental'
 
   return {
-    container: 'min-h-screen bg-[#F7F7F9] flex flex-col pb-24',
+    container: [isDev ? 'bg-[#F4FBF7]' : 'bg-[#F7F7F9]', 'min-h-screen flex flex-col', isDev ? 'pb-28' : 'pb-24'].join(' '),
 
     header: 'flex items-center justify-between px-5 pt-6 pb-4',
     headerTitle: [isDev ? typography['3xl'] : typography['2xl'], typography.bold, 'text-black'].join(' '),
