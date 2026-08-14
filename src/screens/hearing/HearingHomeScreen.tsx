@@ -47,7 +47,7 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
   const [showNotifications, setShowNotifications] = useState(false)
 
   const [me, setMe] = useState<MeProfile | null>(null)
-  const { notifications, unreadCount, markAsRead } = useNotifications(me?.mode_settings.vibration ?? true)
+  const { notifications, unreadCount, markAsRead } = useNotifications(me?.mode_settings?.vibration ?? true)
   const [chatTarget, setChatTarget] = useState<{ id: string; nickname: string; avatarUrl: string } | null>(null)
 
   const openChatWith = (id: string | null, nickname: string, avatarUrl: string) => {
@@ -231,7 +231,7 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
         </div>
       </div>
 
-      {(me?.mode_settings.visual_alerts ?? true) && (
+      {(me?.mode_settings?.visual_alerts ?? true) && (
         <NotificationBanner notifications={notifications} unreadCount={unreadCount} onMoreClick={() => setShowNotifications(true)} />
       )}
 
