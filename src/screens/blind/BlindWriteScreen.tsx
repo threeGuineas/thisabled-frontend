@@ -7,9 +7,11 @@ import checkOffIcon from '../../assets/images/check-off.svg'
 import nextIcon from '../../assets/images/next.svg'
 import imageWIcon from '../../assets/images/image-w.svg'
 import micWIcon from '../../assets/images/mic-w.svg'
+import videoYIcon from '../../assets/images/video-y.svg'
 import sendIcon from '../../assets/images/send.svg'
 import sendGIcon from '../../assets/images/send-g.svg'
-import { uploadImages, createPost } from '../../services/posts'
+import { uploadImages, uploadVideo, createPost } from '../../services/posts'
+import { getVideoDuration, MAX_VIDEO_BYTES, MAX_VIDEO_DURATION_SECONDS, ALLOWED_VIDEO_TYPES } from '../../utils/video'
 import Toast from '../../components/Toast'
 
 const MAX_IMAGES = 3
@@ -32,11 +34,16 @@ export default function BlindWriteScreen({ onBack }: Props) {
   const [content, setContent] = useState('')
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [videoPreview, setVideoPreview] = useState<string | null>(null)
+  const [videoDuration, setVideoDuration] = useState(0)
+  const [isReadingVideo, setIsReadingVideo] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   const { voiceState, voiceError, toggleRecording, stopRecording } = useVoiceInput((text) => {
     setContent((prev) => (prev ? `${prev} ${text}` : text))
@@ -68,6 +75,12 @@ export default function BlindWriteScreen({ onBack }: Props) {
     }
   }, [imagePreviews])
 
+  useEffect(() => {
+    return () => {
+      if (videoPreview) URL.revokeObjectURL(videoPreview)
+    }
+  }, [videoPreview])
+
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value)
   }
@@ -94,6 +107,43 @@ export default function BlindWriteScreen({ onBack }: Props) {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const handleVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setSubmitError(null)
+    if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
+      setSubmitError('mp4·webm·mov 형식만 올릴 수 있어요.')
+      return
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      setSubmitError('동영상 용량은 200MB를 넘을 수 없어요.')
+      return
+    }
+    setIsReadingVideo(true)
+    try {
+      const durationSeconds = await getVideoDuration(file)
+      if (durationSeconds > MAX_VIDEO_DURATION_SECONDS) {
+        setSubmitError('동영상 길이는 3분을 넘을 수 없어요.')
+        return
+      }
+      setVideoFile(file)
+      setVideoPreview(URL.createObjectURL(file))
+      setVideoDuration(durationSeconds)
+    } catch {
+      setSubmitError('동영상 정보를 읽지 못했어요. 다른 파일로 시도해주세요.')
+    } finally {
+      setIsReadingVideo(false)
+    }
+  }
+
+  const handleRemoveVideo = () => {
+    if (videoPreview) URL.revokeObjectURL(videoPreview)
+    setVideoFile(null)
+    setVideoPreview(null)
+    setVideoDuration(0)
+  }
+
   const handleSubmit = async () => {
     if (!content.trim() || isSubmitting) return
     setIsSubmitting(true)
@@ -101,7 +151,10 @@ export default function BlindWriteScreen({ onBack }: Props) {
 
     try {
       let mediaIds: string[] = []
-      if (imageFiles.length > 0) {
+      if (videoFile) {
+        const uploaded = await uploadVideo(videoFile, Math.round(videoDuration))
+        mediaIds = [uploaded.media_id]
+      } else if (imageFiles.length > 0) {
         const uploaded = await uploadImages(imageFiles)
         mediaIds = uploaded.map((m) => m.media_id)
       }
@@ -193,6 +246,22 @@ export default function BlindWriteScreen({ onBack }: Props) {
               </div>
             )}
 
+            {videoPreview && (
+              <div className="mx-5 mt-3">
+                <div className="relative">
+                  <video src={videoPreview} controls className="w-full rounded-2xl object-cover" />
+                  <button
+                    type="button"
+                    onClick={handleRemoveVideo}
+                    className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white text-sm font-bold"
+                    aria-label="동영상 삭제"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
             {voiceError && (
               <p className="mx-5 mt-2 text-xs text-red-400">{voiceError}</p>
             )}
@@ -212,6 +281,14 @@ export default function BlindWriteScreen({ onBack }: Props) {
             multiple
             onChange={handleImageSelect}
           />
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept={ALLOWED_VIDEO_TYPES.join(',')}
+            aria-label="동영상 파일 선택"
+            className="hidden"
+            onChange={handleVideoSelect}
+          />
 
           <div className={styles.editorFooter}>
             <div className={styles.editorActions}>
@@ -219,12 +296,21 @@ export default function BlindWriteScreen({ onBack }: Props) {
                 type="button"
                 className={styles.photoButton}
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isSubmitting || imageFiles.length >= MAX_IMAGES}
+                disabled={isSubmitting || imageFiles.length >= MAX_IMAGES || !!videoFile}
               >
                 <img src={imageWIcon} alt="사진" className={styles.photoIcon} />
                 <span className={styles.photoText}>
                   사진{imageFiles.length > 0 ? ` ${imageFiles.length}/${MAX_IMAGES}` : ''}
                 </span>
+              </button>
+              <button
+                type="button"
+                className={styles.photoButton}
+                onClick={() => videoInputRef.current?.click()}
+                disabled={isSubmitting || isReadingVideo || imageFiles.length > 0 || !!videoFile}
+              >
+                <img src={videoYIcon} alt="동영상" className={styles.photoIcon} />
+                <span className={styles.photoText}>{isReadingVideo ? '확인하는 중...' : '동영상'}</span>
               </button>
               <button
                 type="button"

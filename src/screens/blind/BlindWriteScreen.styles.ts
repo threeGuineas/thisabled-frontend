@@ -48,25 +48,25 @@ const styles = {
   ].join(' '),
 
   editorFooter: 'fixed bottom-0 left-0 right-0 px-6 pb-8 pt-3 flex flex-col gap-3 bg-black',
-  editorActions: 'flex items-center justify-between',
+  editorActions: 'flex items-center flex-wrap gap-2',
 
   photoButton: [
-    'flex items-center justify-center gap-2 bg-[#161616] rounded-2xl w-[134px] py-5',
+    'flex items-center justify-center gap-2 bg-[#161616] rounded-2xl px-5 py-5',
     'active:opacity-70',
   ].join(' '),
   photoIcon: 'w-5 h-5',
   photoText: ['text-white', typography.sm, typography.medium].join(' '),
 
   voiceButton: [
-    'flex items-center gap-2 bg-[#161616] rounded-2xl px-10 py-5',
+    'flex items-center gap-2 bg-[#161616] rounded-2xl px-6 py-5',
     'active:opacity-70',
   ].join(' '),
   voiceButtonRecording: [
-    'flex items-center gap-2 bg-[#161616] border-2 border-red-400 rounded-2xl px-10 py-5',
+    'flex items-center gap-2 bg-[#161616] border-2 border-red-400 rounded-2xl px-6 py-5',
     'active:opacity-70',
   ].join(' '),
   voiceButtonTranscribing: [
-    'flex items-center gap-2 bg-[#161616] rounded-2xl px-10 py-5 opacity-50',
+    'flex items-center gap-2 bg-[#161616] rounded-2xl px-6 py-5 opacity-50',
   ].join(' '),
   voiceIcon: 'w-5 h-5',
   voiceIconRecording: 'w-5 h-5 animate-pulse',
