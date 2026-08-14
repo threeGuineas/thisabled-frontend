@@ -28,6 +28,7 @@ function avatarFor(author: Author): string {
 
 interface Props {
   onTabChange: (tab: Tab) => void
+  onOpenChat: (friend: Author) => void
   theme?: FriendScreenTheme
 }
 
@@ -40,10 +41,12 @@ interface ConfirmTarget {
   action: ConfirmAction
 }
 
-export default function DefaultFriendScreen({ onTabChange, theme = 'default' }: Props) {
+export default function DefaultFriendScreen({ onTabChange, onOpenChat, theme = 'default' }: Props) {
   const styles = getStyles(theme)
   const [activeTab, setActiveTab] = useState<Tab>('friend')
   const [view, setView] = useState<ScreenView>('list')
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const [friends, setFriends] = useState<Author[]>([])
   const [isLoadingFriends, setIsLoadingFriends] = useState(true)
@@ -197,16 +200,61 @@ export default function DefaultFriendScreen({ onTabChange, theme = 'default' }: 
     setConfirmError(null)
   }
 
+  const handleToggleSearch = () => {
+    setShowSearch((prev) => {
+      if (prev) setSearchQuery('')
+      return !prev
+    })
+  }
+
+  const trimmedQuery = searchQuery.trim()
+  const visibleFriends = trimmedQuery
+    ? friends.filter((f) => f.nickname.toLowerCase().includes(trimmedQuery.toLowerCase()))
+    : friends
+
   return (
     <div className={styles.container}>
       {view === 'list' ? (
         <>
           <div className={styles.header}>
             <span className={styles.headerTitle}>친구</span>
-            <div className={styles.searchIconWrapper}>
-              <img src={searchIcon} alt="검색 창 버튼" className={styles.searchIcon} />
-            </div>
+            <button
+              type="button"
+              onClick={handleToggleSearch}
+              className={styles.searchIconWrapper}
+              aria-label={showSearch ? '친구 검색 닫기' : '친구 검색'}
+              aria-pressed={showSearch}
+            >
+              <img src={searchIcon} alt="" className={styles.searchIcon} />
+            </button>
           </div>
+
+          {showSearch && (
+            <div className={styles.searchWrapper}>
+              <div className={styles.searchBox}>
+                <img src={searchIcon} alt="" className={styles.searchBoxIcon} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="친구 이름을 검색하세요"
+                  className={styles.searchInput}
+                  aria-label="친구 이름 검색"
+                  autoFocus
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className={styles.searchClearButton}
+                    aria-label="검색어 지우기"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <button
             type="button"
@@ -299,7 +347,9 @@ export default function DefaultFriendScreen({ onTabChange, theme = 'default' }: 
             )}
           </div>
 
-          <span className={styles.listTitle}>친구 {friends.length}</span>
+          <span className={styles.listTitle}>
+            {trimmedQuery ? `검색 결과 ${visibleFriends.length}` : `친구 ${friends.length}`}
+          </span>
           {isLoadingFriends ? (
             <div className={styles.emptyState}>
               <span className={styles.emptyText}>친구 목록을 불러오는 중...</span>
@@ -315,21 +365,36 @@ export default function DefaultFriendScreen({ onTabChange, theme = 'default' }: 
             <div className={styles.emptyState}>
               <span className={styles.emptyText}>아직 친구가 없어요.</span>
             </div>
+          ) : visibleFriends.length === 0 ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyText}>'{trimmedQuery}'와(과) 일치하는 친구가 없어요.</span>
+            </div>
           ) : (
             <div className={styles.friendList}>
-              {friends.map((friend, i) => (
-                <button
-                  key={friend.id ?? i}
-                  type="button"
-                  onClick={() => setProfileFriend({ id: friend.id, nickname: friend.nickname, bio: null, avatarUrl: avatarFor(friend) })}
-                  className={styles.friendRow}
-                  aria-label={`${friend.nickname}님 프로필 보기`}
-                >
-                  <img src={avatarFor(friend)} alt="" className={styles.friendAvatar} />
-                  <div className={styles.friendInfo}>
-                    <span className={styles.friendNickname}>{friend.nickname}</span>
+              {visibleFriends.map((friend, i) => (
+                <div key={friend.id ?? i} className={styles.friendItem}>
+                  <button
+                    type="button"
+                    onClick={() => setProfileFriend({ id: friend.id, nickname: friend.nickname, bio: null, avatarUrl: avatarFor(friend) })}
+                    className={styles.friendAvatarButton}
+                    aria-label={`${friend.nickname}님 프로필 보기`}
+                  >
+                    <img src={avatarFor(friend)} alt="" className={styles.friendAvatar} />
+                    <div className={styles.friendInfo}>
+                      <span className={styles.friendNickname}>{friend.nickname}</span>
+                    </div>
+                  </button>
+                  <div className={styles.friendActions}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenChat(friend)}
+                      className={styles.chatButton}
+                      aria-label={`${friend.nickname}님과 채팅하기`}
+                    >
+                      <span className={styles.chatButtonText}>채팅하기</span>
+                    </button>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )}

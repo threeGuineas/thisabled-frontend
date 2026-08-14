@@ -8,10 +8,10 @@ import DefaultChatScreen from './DefaultChatScreen'
 import DefaultFriendScreen from './DefaultFriendScreen'
 import { useProfileModal } from '../../hooks/useProfileModal'
 import type { ProfileModalUser } from '../../components/BlindUserProfileModal'
-import { getFeed, likePost, unlikePost, type Post } from '../../services/posts'
+import { getFeed, likePost, unlikePost, type Post, type Author } from '../../services/posts'
 import { getMe, type MeProfile } from '../../services/users'
 import { type DisabilityType } from '../../services/auth'
-import { resolveImageUrl } from '../../utils/avatar'
+import { resolveImageUrl, avatarUrlFor } from '../../utils/avatar'
 import { FILTERS, categoryFor } from '../../utils/category'
 import searchIcon from '../../assets/images/search.svg'
 import writeIcon from '../../assets/images/write.svg'
@@ -130,7 +130,14 @@ export default function DefaultHomeScreen({ onLoggedOut, onModeChanged }: Props)
   }
 
   if (activeTab === 'friend') {
-    return <DefaultFriendScreen onTabChange={setActiveTab} />
+    return (
+      <DefaultFriendScreen
+        onTabChange={setActiveTab}
+        onOpenChat={(friend: Author) =>
+          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url, String(friend.id ?? friend.nickname)))
+        }
+      />
+    )
   }
 
   if (activeTab === 'chat') {

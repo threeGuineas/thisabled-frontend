@@ -10,10 +10,10 @@ import DefaultChatScreen from '../default/DefaultChatScreen'
 import DefaultFriendScreen from '../default/DefaultFriendScreen'
 import { useProfileModal } from '../../hooks/useProfileModal'
 import type { ProfileModalUser } from '../../components/BlindUserProfileModal'
-import { getFeed, getPost, likePost, unlikePost, type Post } from '../../services/posts'
+import { getFeed, getPost, likePost, unlikePost, type Post, type Author } from '../../services/posts'
 import { getMe, type MeProfile } from '../../services/users'
 import { type DisabilityType } from '../../services/auth'
-import { resolveImageUrl } from '../../utils/avatar'
+import { resolveImageUrl, avatarUrlFor } from '../../utils/avatar'
 import { FILTERS, categoryFor } from '../../utils/category'
 import { useNotifications } from '../../hooks/useNotifications'
 import searchIcon from '../../assets/images/search.svg'
@@ -138,7 +138,15 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
   }
 
   if (activeTab === 'friend') {
-    return <DefaultFriendScreen onTabChange={setActiveTab} theme="hearing" />
+    return (
+      <DefaultFriendScreen
+        onTabChange={setActiveTab}
+        onOpenChat={(friend: Author) =>
+          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url, String(friend.id ?? friend.nickname)))
+        }
+        theme="hearing"
+      />
+    )
   }
 
   if (activeTab === 'chat') {

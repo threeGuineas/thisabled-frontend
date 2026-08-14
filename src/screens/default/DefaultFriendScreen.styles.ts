@@ -13,8 +13,15 @@ export default function getStyles(theme: FriendScreenTheme = 'default') {
 
     header: 'flex items-center justify-between px-5 pt-6 pb-4',
     headerTitle: [isDev ? typography['3xl'] : typography['2xl'], typography.bold, 'text-black'].join(' '),
-    searchIconWrapper: [colors.bg.white, 'w-10 h-10 rounded-full flex items-center justify-center shadow-sm'].join(' '),
+    searchIconWrapper: [colors.bg.white, 'w-10 h-10 rounded-full flex items-center justify-center shadow-sm active:opacity-70'].join(' '),
     searchIcon: 'w-5 h-5',
+
+    // 친구 검색
+    searchWrapper: 'px-5 pb-4',
+    searchBox: [colors.bg.white, 'flex items-center gap-2 rounded-2xl px-4 py-3 shadow-sm'].join(' '),
+    searchBoxIcon: 'w-5 h-5 flex-shrink-0',
+    searchInput: ['flex-1 bg-transparent outline-none min-w-0', typography.sm, 'text-black placeholder:text-[#9898A8]'].join(' '),
+    searchClearButton: 'w-5 h-5 flex-shrink-0 flex items-center justify-center text-[#9898A8] text-sm',
 
     // 친구 요청 배너 (탭하면 친구 요청 화면으로 이동)
     requestBanner: [colors.bg.white, 'flex items-center justify-between mx-5 mb-6 rounded-2xl shadow-sm active:opacity-70', isDev ? 'px-5 py-5' : 'px-4 py-3.5'].join(' '),
@@ -50,10 +57,14 @@ export default function getStyles(theme: FriendScreenTheme = 'default') {
     // 친구 목록 — 흰 카드 하나에 묶어 옅은 회색 캔버스 위에 띄운다
     listTitle: [isDev ? typography.lg : typography.base, typography.bold, 'block px-5 mb-2 text-black'].join(' '),
     friendList: [colors.bg.white, 'flex flex-col mx-5 rounded-3xl shadow-sm overflow-hidden divide-y divide-[#EBEBEF]'].join(' '),
-    friendRow: ['flex items-center gap-3 w-full active:bg-[#F7F7F9]', isDev ? 'px-4 py-4' : 'px-4 py-3'].join(' '),
+    friendItem: ['flex items-center gap-3 w-full', isDev ? 'px-4 py-4' : 'px-4 py-3'].join(' '),
+    friendAvatarButton: 'flex-1 min-w-0 flex items-center gap-3 text-left active:opacity-70',
     friendAvatar: [isDev ? 'w-14 h-14' : 'w-12 h-12', 'rounded-full object-cover flex-shrink-0', colors.bg.gray04].join(' '),
     friendInfo: 'flex-1 min-w-0 text-left',
     friendNickname: [isDev ? typography.lg : typography.base, typography.semibold, 'text-black truncate w-full'].join(' '),
+    friendActions: 'flex-shrink-0',
+    chatButton: [accentBg, 'flex items-center justify-center rounded-full flex-shrink-0 active:opacity-80', isDev ? 'px-5 py-3' : 'px-4 py-2.5'].join(' '),
+    chatButtonText: [isDev ? typography.sm : typography.xs, typography.bold, 'text-black'].join(' '),
 
     // 친구 요청
     requestBoxRow: [colors.bg.white, 'flex mx-5 mb-4 rounded-2xl p-1 gap-1 shadow-sm'].join(' '),

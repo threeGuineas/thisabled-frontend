@@ -8,10 +8,10 @@ import DevChatScreen from './DevChatScreen'
 import DevFriendScreen from './DevFriendScreen'
 import { useProfileModal } from '../../hooks/useProfileModal'
 import type { ProfileModalUser } from '../../components/BlindUserProfileModal'
-import { getFeed, likePost, unlikePost, type Post } from '../../services/posts'
+import { getFeed, likePost, unlikePost, type Post, type Author } from '../../services/posts'
 import { getMe, type MeProfile } from '../../services/users'
 import { type DisabilityType } from '../../services/auth'
-import { resolveImageUrl } from '../../utils/avatar'
+import { resolveImageUrl, avatarUrlFor } from '../../utils/avatar'
 import { FILTERS, categoryFor } from '../../utils/category'
 import writeIcon from '../../assets/images/write-w.svg'
 import heartIcon from '../../assets/images/heart.svg'
@@ -134,7 +134,14 @@ export default function DevHomeScreen({ onLoggedOut, onModeChanged }: Props) {
   }
 
   if (activeTab === 'friend') {
-    return <DevFriendScreen onTabChange={setActiveTab} />
+    return (
+      <DevFriendScreen
+        onTabChange={setActiveTab}
+        onOpenChat={(friend: Author) =>
+          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url, String(friend.id ?? friend.nickname)))
+        }
+      />
+    )
   }
 
   if (activeTab === 'chat') {

@@ -24,10 +24,10 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp
 const TAG_MAX_COUNT = 10
 
 const MODES = [
-  { id: 'default',       title: '기본화면', desc: '표준 인터페이스' },
-  { id: 'visual',        title: '시각장애', desc: '고대비 · 큰 글씨 · 음성 지원' },
-  { id: 'hearing',       title: '청각장애', desc: '자막 · 시각 알림' },
-  { id: 'developmental', title: '발달장애', desc: '쉬운 말 · 큰 버튼 · AI 도움' },
+  { id: 'default',       title: '기본화면', desc: '보통 화면 그대로 써요' },
+  { id: 'visual',        title: '시각장애', desc: '선명한 색 · 큰 글씨 · 소리로 안내' },
+  { id: 'hearing',       title: '청각장애', desc: '자막 · 눈으로 보는 알림' },
+  { id: 'developmental', title: '발달장애', desc: '쉬운 말 · 큰 버튼 · 도우미 도움' },
 ] as const
 
 type ModeId = typeof MODES[number]['id']
@@ -88,7 +88,7 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
       setPendingMode(null)
       onModeChanged(pendingMode)
     } catch {
-      setModeError('모드 변경에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setModeError('화면을 바꾸지 못했어요. 잠시 후 다시 해보세요.')
     } finally {
       setModeSaving(false)
     }
@@ -157,7 +157,7 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
               <span className={styles.nickname}>{me ? me.nickname : meError || '불러오는 중...'}</span>
             </div>
             <button type="button" disabled={!me} onClick={() => setView('editProfile')} className={styles.editButton}>
-              <span className={styles.editButtonText}>편집</span>
+              <span className={styles.editButtonText}>바꾸기</span>
             </button>
           </div>
         </div>
@@ -165,9 +165,9 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
 
       <div className={styles.section}>
         <div className={styles.tagsSectionHeader}>
-          <span className={styles.tagsSectionTitle}>관심사 태그</span>
+          <span className={styles.tagsSectionTitle}>관심사</span>
           <button type="button" disabled={!me} onClick={() => setView('tags')} className={styles.editButton}>
-            <span className={styles.editButtonText}>편집</span>
+            <span className={styles.editButtonText}>바꾸기</span>
           </button>
         </div>
         <div className={styles.tagsCard}>
@@ -178,13 +178,13 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
               ))}
             </div>
           ) : (
-            <span className={styles.tagsEmptyText}>아직 등록한 관심사 태그가 없어요.</span>
+            <span className={styles.tagsEmptyText}>아직 고른 관심사가 없어요.</span>
           )}
         </div>
       </div>
 
       <div className={styles.modeSection}>
-        <span className={styles.modeSectionTitle}>화면 모드</span>
+        <span className={styles.modeSectionTitle}>화면 종류</span>
         <div className={styles.modeCard}>
           <div className={styles.modeList}>
             {MODES.map((mode, idx) => {
@@ -211,14 +211,14 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
         <div className={styles.settingsCard}>
           <div className={styles.settingsRow}>
             <div className={styles.settingsTextGroup}>
-              <span className={styles.settingsTitle}>낯선 사람 메시지 요청 허용</span>
-              <span className={styles.settingsDesc}>친구가 아닌 사람의 대화 요청을 받을지 정해요</span>
+              <span className={styles.settingsTitle}>모르는 사람 대화 받기</span>
+              <span className={styles.settingsDesc}>친구가 아닌 사람이 나에게 말을 걸 수 있게 할지 정해요</span>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={!!me?.stranger_requests_allowed}
-              aria-label="낯선 사람 메시지 요청 허용"
+              aria-label="모르는 사람 대화 받기"
               disabled={!me || strangerSaving}
               onClick={handleToggleStranger}
               className={[styles.toggleTrack, me?.stranger_requests_allowed ? styles.toggleTrackOn : styles.toggleTrackOff].join(' ')}
@@ -230,13 +230,13 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
       </div>
 
       <div className={styles.etcSection}>
-        <span className={styles.etcSectionTitle}>기타</span>
+        <span className={styles.etcSectionTitle}>다른 기능</span>
         <div className={styles.etcCard}>
           <button type="button" onClick={() => setView('contacts')} className={styles.etcButton}>
             <img src={friendIcon} alt="" className="w-6 h-6" />
             <div className={styles.etcTextGroup}>
-              <span className={styles.etcTitle}>친구 및 차단 사용자 관리</span>
-              <span className={styles.etcDesc}>친구 목록 · 차단 해제</span>
+              <span className={styles.etcTitle}>친구와 차단 목록</span>
+              <span className={styles.etcDesc}>친구 보기 · 차단 풀기</span>
             </div>
             <img src={modeIcon} alt="" className={styles.etcRightIcon} />
           </button>
@@ -247,7 +247,7 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
         <span className={styles.logoutText}>{loggingOut ? '로그아웃 중...' : '로그아웃'}</span>
       </button>
       <button type="button" onClick={() => setView('withdraw')} className={styles.withdrawLink}>
-        <span className={styles.withdrawLinkText}>회원 탈퇴</span>
+        <span className={styles.withdrawLinkText}>회원 그만두기</span>
       </button>
 
       {pendingMode && <div className={styles.overlay} onClick={handleModeCancel} />}
@@ -255,16 +255,16 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
       {pendingMode && (
         <div className={`${styles.bottomSheet} ${styles.bottomSheetOpen}`}>
           <div className={styles.sheetHandle} />
-          <span className={styles.sheetTitle}>화면 모드 전환</span>
+          <span className={styles.sheetTitle}>화면 바꾸기</span>
           <div className={styles.sheetTextGroup}>
             <p className={styles.sheetQuestion}>
-              <span className={styles.sheetQuestionHighlight}>{pendingModeTitle} </span>모드로 바꿀까요?
+              <span className={styles.sheetQuestionHighlight}>{pendingModeTitle} </span>화면으로 바꿀까요?
             </p>
-            <span className={styles.sheetDesc}>앱 전체가 해당 모드에 맞게 바뀌어요.</span>
+            <span className={styles.sheetDesc}>앱 전체 화면이 새 모습으로 바뀌어요.</span>
           </div>
           {modeError && <p className={styles.errorText}>{modeError}</p>}
           <button type="button" disabled={modeSaving} onClick={handleModeConfirm} className={styles.sheetConfirmButton}>
-            <span className={styles.sheetConfirmText}>{modeSaving ? '변경 중...' : '변경하기'}</span>
+            <span className={styles.sheetConfirmText}>{modeSaving ? '바꾸는 중...' : '바꾸기'}</span>
           </button>
           <button type="button" disabled={modeSaving} onClick={handleModeCancel} className={styles.sheetCancelButton}>
             <span className={styles.sheetCancelText}>취소</span>
@@ -313,7 +313,7 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
       return
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setPhotoError('이미지 용량은 10MB를 넘을 수 없어요.')
+      setPhotoError('사진 파일 크기는 10MB보다 작아야 해요.')
       return
     }
     setPhotoError('')
@@ -325,7 +325,7 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
     if (saving) return
     const trimmedNickname = nickname.trim()
     if (!NICKNAME_REGEX.test(trimmedNickname)) {
-      setNicknameError('닉네임은 2~12자 한글·영문·숫자만 가능해요.')
+      setNicknameError('별명은 2~12글자로, 한글·영어·숫자만 쓸 수 있어요.')
       return
     }
 
@@ -346,9 +346,9 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
       onSaved(updated)
     } catch (err: unknown) {
       const apiErr = err as { status?: number; detail?: string }
-      if (apiErr?.status === 409) setNicknameError('이미 사용 중인 닉네임이에요.')
+      if (apiErr?.status === 409) setNicknameError('이미 다른 사람이 쓰고 있는 별명이에요.')
       else if (apiErr?.status === 400) setApiError(apiErr.detail ?? '입력 내용을 다시 확인해주세요.')
-      else setApiError('저장 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+      else setApiError('저장하지 못했어요. 잠시 후 다시 해보세요.')
     } finally {
       setSaving(false)
     }
@@ -362,7 +362,7 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
         <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로 가기">
           <img src={backIcon} alt="" className={styles.subBackIcon} />
         </button>
-        <span className={styles.subHeaderTitle}>프로필 편집</span>
+        <span className={styles.subHeaderTitle}>내 정보 바꾸기</span>
       </div>
 
       <div className={styles.editForm}>
@@ -384,7 +384,7 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
         </div>
 
         <div className={styles.editFieldWrapper}>
-          <label className={styles.editLabel}>닉네임</label>
+          <label className={styles.editLabel}>별명</label>
           <input
             type="text"
             value={nickname}
@@ -397,7 +397,7 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
         </div>
 
         <div className={styles.editFieldWrapper}>
-          <label className={styles.editLabel}>자기소개</label>
+          <label className={styles.editLabel}>나를 알려주는 글</label>
           <textarea
             value={bio}
             maxLength={BIO_MAX_LENGTH}
@@ -441,7 +441,7 @@ function TagsEditView({ me, onSaved, onBack }: TagsEditViewProps) {
   useEffect(() => {
     getTags()
       .then((res) => setTagCatalog(res.tags))
-      .catch(() => setTagsError('관심사 태그를 불러오지 못했어요.'))
+      .catch(() => setTagsError('관심사를 불러오지 못했어요.'))
       .finally(() => setTagsLoading(false))
   }, [])
 
@@ -468,9 +468,9 @@ function TagsEditView({ me, onSaved, onBack }: TagsEditViewProps) {
       onSaved(updated)
     } catch (err: unknown) {
       const apiErr = err as { status?: number; detail?: string }
-      if (apiErr?.status === 400) setSaveError(apiErr.detail ?? `관심사 태그는 최대 ${TAG_MAX_COUNT}개까지 고를 수 있어요.`)
-      else if (apiErr?.status === 404) setSaveError('선택한 태그 정보가 오래됐어요. 다시 골라주세요.')
-      else setSaveError('저장 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+      if (apiErr?.status === 400) setSaveError(apiErr.detail ?? `관심사는 최대 ${TAG_MAX_COUNT}개까지 고를 수 있어요.`)
+      else if (apiErr?.status === 404) setSaveError('고른 정보가 오래됐어요. 다시 골라주세요.')
+      else setSaveError('저장하지 못했어요. 잠시 후 다시 해보세요.')
     } finally {
       setSaving(false)
     }
@@ -482,7 +482,7 @@ function TagsEditView({ me, onSaved, onBack }: TagsEditViewProps) {
         <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로 가기">
           <img src={backIcon} alt="" className={styles.subBackIcon} />
         </button>
-        <span className={styles.subHeaderTitle}>관심사 태그</span>
+        <span className={styles.subHeaderTitle}>관심사</span>
       </div>
 
       <div className={styles.tagEditBody}>
@@ -567,7 +567,7 @@ function WithdrawView({ onWithdrawn, onBack }: WithdrawViewProps) {
       onWithdrawn()
     } catch (err: unknown) {
       const apiErr = err as { detail?: string }
-      setError(apiErr?.detail ?? '탈퇴 처리에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setError(apiErr?.detail ?? '그만두기를 하지 못했어요. 잠시 후 다시 해보세요.')
       setConfirming(false)
     } finally {
       setWithdrawing(false)
@@ -580,13 +580,13 @@ function WithdrawView({ onWithdrawn, onBack }: WithdrawViewProps) {
         <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로 가기">
           <img src={backIcon} alt="" className={styles.subBackIcon} />
         </button>
-        <span className={styles.subHeaderTitle}>회원 탈퇴</span>
+        <span className={styles.subHeaderTitle}>회원 그만두기</span>
       </div>
 
       <div className={styles.withdrawBody}>
         <p className={styles.withdrawWarning}>
-          탈퇴하면 되돌릴 수 없어요. 친구·차단 관계와 알림 기록은 계정과 함께 삭제되고,
-          같은 계정으로 30일간 다시 가입할 수 없어요.
+          그만두면 다시 되돌릴 수 없어요. 친구 목록, 차단 목록, 알림 기록도 모두 함께 사라져요.
+          30일 동안은 같은 계정으로 다시 가입할 수 없어요.
         </p>
 
         <div className={styles.withdrawOptionGroup}>
@@ -594,7 +594,7 @@ function WithdrawView({ onWithdrawn, onBack }: WithdrawViewProps) {
             <span className={postsAction === 'anonymize' ? styles.withdrawRadioSelected : styles.withdrawRadio} />
             <span className={styles.withdrawOptionTextGroup}>
               <span className={styles.withdrawOptionTitle}>내 글·댓글 남기기</span>
-              <span className={styles.withdrawOptionDesc}>작성자를 '탈퇴한 사용자'로 표시하고 글은 그대로 남겨요</span>
+              <span className={styles.withdrawOptionDesc}>글쓴이 이름을 '그만둔 사용자'로 바꾸고, 글은 그대로 남겨요</span>
             </span>
           </button>
           <button type="button" onClick={() => setPostsAction('delete')} className={postsAction === 'delete' ? styles.withdrawOptionSelected : styles.withdrawOption}>
@@ -609,7 +609,7 @@ function WithdrawView({ onWithdrawn, onBack }: WithdrawViewProps) {
         {error && <p className={styles.editApiError}>{error}</p>}
 
         <button type="button" onClick={() => setConfirming(true)} className={styles.withdrawSubmitButton}>
-          <span className={styles.withdrawSubmitText}>탈퇴하기</span>
+          <span className={styles.withdrawSubmitText}>그만두기</span>
         </button>
       </div>
 
@@ -617,13 +617,13 @@ function WithdrawView({ onWithdrawn, onBack }: WithdrawViewProps) {
         <>
           <div className={styles.confirmOverlay} onClick={() => !withdrawing && setConfirming(false)} />
           <div className={styles.confirmModal}>
-            <p className={styles.confirmText}>정말 탈퇴할까요?{'\n'}이 작업은 되돌릴 수 없어요.</p>
+            <p className={styles.confirmText}>정말 그만둘까요?{'\n'}이 일은 되돌릴 수 없어요.</p>
             <div className={styles.confirmButtons}>
               <button type="button" disabled={withdrawing} onClick={() => setConfirming(false)} className={styles.confirmNoButton}>
                 아니오
               </button>
               <button type="button" disabled={withdrawing} onClick={handleWithdraw} className={styles.confirmYesButton}>
-                {withdrawing ? '처리 중...' : '탈퇴하기'}
+                {withdrawing ? '하는 중...' : '그만두기'}
               </button>
             </div>
           </div>
@@ -687,7 +687,7 @@ function ContactsManageView({ onBack }: ContactsManageViewProps) {
       setConfirmTarget(null)
     } catch (err: unknown) {
       const e = err as { detail?: string }
-      setConfirmError(e.detail ?? '처리에 실패했어요.')
+      setConfirmError(e.detail ?? '처리하지 못했어요.')
     } finally {
       setConfirming(false)
     }
@@ -699,7 +699,7 @@ function ContactsManageView({ onBack }: ContactsManageViewProps) {
         <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로 가기">
           <img src={backIcon} alt="" className={styles.subBackIcon} />
         </button>
-        <span className={styles.subHeaderTitle}>친구 및 차단 사용자 관리</span>
+        <span className={styles.subHeaderTitle}>친구와 차단 목록</span>
       </div>
 
       <div className={styles.contactsBody}>
@@ -746,7 +746,7 @@ function ContactsManageView({ onBack }: ContactsManageViewProps) {
                   onClick={() => blocked.id && setConfirmTarget({ id: blocked.id, nickname: blocked.nickname, action: 'unblock' })}
                   className={styles.contactsActionButton}
                 >
-                  차단 해제
+                  차단 풀기
                 </button>
               </div>
             ))}
@@ -761,7 +761,7 @@ function ContactsManageView({ onBack }: ContactsManageViewProps) {
             <p className={styles.confirmText}>
               {confirmTarget.action === 'unfriend'
                 ? `${confirmTarget.nickname}님과 친구를 끊을까요?`
-                : `${confirmTarget.nickname}님의 차단을 해제할까요?`}
+                : `${confirmTarget.nickname}님 차단을 풀까요?`}
             </p>
             {confirmError && <p className={styles.editFieldError}>{confirmError}</p>}
             <div className={styles.confirmButtons}>
@@ -769,7 +769,7 @@ function ContactsManageView({ onBack }: ContactsManageViewProps) {
                 아니오
               </button>
               <button type="button" disabled={confirming} onClick={handleConfirmYes} className={styles.confirmYesButton}>
-                {confirming ? '처리 중...' : '네'}
+                {confirming ? '하는 중...' : '네'}
               </button>
             </div>
           </div>
