@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import styles from './DevWriteScreen.styles'
-import { uploadImages, uploadVideo, createPost } from '../../services/posts'
+import { uploadImages, createPost } from '../../services/posts'
 import { completeText } from '../../services/comm'
 import { useAiNotice } from '../../hooks/useAiNotice'
+import { useVideoPost } from '../../hooks/useVideoPost'
 import AiNoticeModal from '../../components/AiNoticeModal'
 import Toast from '../../components/Toast'
 import { getVideoDuration, MAX_VIDEO_BYTES, MAX_VIDEO_DURATION_SECONDS, ALLOWED_VIDEO_TYPES } from '../../utils/video'
@@ -36,6 +37,7 @@ export default function DevWriteScreen({ onBack }: Props) {
   const [showSuccessToast, setShowSuccessToast] = useState(false)
 
   const { noticeOpen, runWithNotice, confirmNotice, cancelNotice } = useAiNotice()
+  const videoPost = useVideoPost()
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [isCompleting, setIsCompleting] = useState(false)
   const [completeError, setCompleteError] = useState<string | null>(null)
@@ -133,15 +135,17 @@ export default function DevWriteScreen({ onBack }: Props) {
     setIsSubmitting(true)
     setSubmitError(null)
     try {
-      let mediaIds: string[] = []
-      if (media?.kind === 'photo') {
-        const uploaded = await uploadImages([media.file])
-        mediaIds = uploaded.map((m) => m.media_id)
-      } else if (media?.kind === 'video') {
-        const uploaded = await uploadVideo(media.file, Math.round(media.durationSeconds))
-        mediaIds = [uploaded.media_id]
+      if (media?.kind === 'video') {
+        const post = await videoPost.publish(media.file, Math.round(media.durationSeconds), content.trim())
+        if (!post) return
+      } else {
+        let mediaIds: string[] = []
+        if (media?.kind === 'photo') {
+          const uploaded = await uploadImages([media.file])
+          mediaIds = uploaded.map((m) => m.media_id)
+        }
+        await createPost(content.trim(), mediaIds)
       }
-      await createPost(content.trim(), mediaIds)
       setShowSuccessToast(true)
       setTimeout(onBack, 1500)
     } catch (err: unknown) {
@@ -149,6 +153,16 @@ export default function DevWriteScreen({ onBack }: Props) {
       setSubmitError(e.detail ?? '글 등록에 실패했어요. 다시 시도해주세요.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handlePublishWithoutCaption = async () => {
+    setIsSubmitting(true)
+    const post = await videoPost.publishWithoutCaption()
+    setIsSubmitting(false)
+    if (post) {
+      setShowSuccessToast(true)
+      setTimeout(onBack, 1500)
     }
   }
 
@@ -177,17 +191,32 @@ export default function DevWriteScreen({ onBack }: Props) {
             </div>
 
             {submitError && <p className={styles.errorText}>{submitError}</p>}
+            {videoPost.error && <p className={styles.errorText}>{videoPost.error}</p>}
+            {videoPost.phase === 'caption-failed' && (
+              <p className={styles.errorText}>자막을 만들지 못했어요. 자막 없이 올릴까요?</p>
+            )}
           </div>
 
           <div className={styles.footer}>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className={styles.nextButtonActive}
-            >
-              <span className={styles.nextButtonTextActive}>{isSubmitting ? '올리는 중...' : '올리기'}</span>
-            </button>
+            {videoPost.phase === 'caption-failed' ? (
+              <button
+                type="button"
+                onClick={handlePublishWithoutCaption}
+                disabled={isSubmitting}
+                className={styles.nextButtonActive}
+              >
+                <span className={styles.nextButtonTextActive}>{isSubmitting ? '올리는 중...' : '자막 없이 올리기'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className={styles.nextButtonActive}
+              >
+                <span className={styles.nextButtonTextActive}>{isSubmitting ? '올리는 중...' : '올리기'}</span>
+              </button>
+            )}
           </div>
         </div>
       </>

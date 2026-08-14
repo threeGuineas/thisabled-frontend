@@ -44,6 +44,14 @@ export interface UploadedMedia {
   url: string
 }
 
+// POST /media/videos는 이미지 업로드와 달리 업로드 시점에 processing 상태의 Post 드래프트를
+// 함께 만든다(자막 생성도 즉시 시작) — media_id만 반환하는 UploadedMedia와는 응답 형태가 다르다.
+export interface UploadedVideo {
+  post_id: string
+  media_id: string
+  caption_status: AiStatus
+}
+
 export interface LikeResult {
   post_id: string
   liked: boolean
@@ -111,6 +119,7 @@ const MOCK_CAPTION_DEMO_CONTENT = '영상 자막이 정상적으로 잘 나오�
 const mockPostStore = new Map<string, Post>()
 const mockDescriptionReadyAt = new Map<string, number>()
 const mockCaptionReadyAt = new Map<string, number>()
+const mockCaptionShouldFail = new Map<string, boolean>()
 const mockCommentStore = new Map<string, Comment[]>()
 
 function mockDescriptionFor(mediaId: string): string {
@@ -184,7 +193,11 @@ function resolveMockCaptions(post: Post): Post {
     const readyAt = mockCaptionReadyAt.get(m.id)
     if (!readyAt || Date.now() < readyAt) return m
     mockCaptionReadyAt.delete(m.id)
-    return { ...m, caption_status: 'done' as const, caption: MOCK_CAPTION_SEGMENTS }
+    const shouldFail = mockCaptionShouldFail.get(m.id) ?? false
+    mockCaptionShouldFail.delete(m.id)
+    return shouldFail
+      ? { ...m, caption_status: 'failed' as const }
+      : { ...m, caption_status: 'done' as const, caption: MOCK_CAPTION_SEGMENTS }
   })
   const resolved = { ...post, media }
   mockPostStore.set(post.id, resolved)
@@ -196,9 +209,65 @@ const mockPosts = {
     await sleep(800)
     return files.map(() => ({ media_id: crypto.randomUUID(), url: '/uploads/mock-image.jpg' }))
   },
-  async uploadVideo(): Promise<UploadedMedia> {
+  // 실제 백엔드처럼 업로드 시점에 processing 드래프트 Post를 함께 만든다.
+  // 파일명에 'failtest'가 들어있으면 자막 생성이 failed로 끝나도록 해 실패 케이스를 확인할 수 있다.
+  async uploadVideo(file: File): Promise<UploadedVideo> {
     await sleep(1000)
-    return { media_id: crypto.randomUUID(), url: MOCK_VIDEO_URL }
+    const postId = crypto.randomUUID()
+    const mediaId = crypto.randomUUID()
+    const post: Post = {
+      id: postId,
+      author: { id: 'mock-uuid', nickname: '나', profile_image_url: null },
+      content: '',
+      status: 'processing',
+      media: [{
+        id: mediaId,
+        media_type: 'video',
+        url: MOCK_VIDEO_URL,
+        sort_order: 0,
+        description: null,
+        description_status: 'none',
+        caption: null,
+        caption_status: 'processing',
+      }],
+      like_count: 0,
+      comment_count: 0,
+      liked_by_me: false,
+      published_at: null,
+      created_at: new Date().toISOString(),
+    }
+    mockPostStore.set(postId, post)
+    mockCaptionReadyAt.set(mediaId, Date.now() + 2500)
+    mockCaptionShouldFail.set(mediaId, file.name.includes('failtest'))
+    return { post_id: postId, media_id: mediaId, caption_status: 'processing' }
+  },
+  async updatePost(postId: string, content: string): Promise<Post> {
+    await sleep(300)
+    const post = mockPostStore.get(postId)
+    if (!post) throw { status: 404, detail: '게시물을 찾을 수 없습니다.' }
+    const updated = { ...post, content }
+    mockPostStore.set(postId, updated)
+    return updated
+  },
+  async getCaptionStatus(postId: string): Promise<{ caption_status: AiStatus }> {
+    await sleep(300)
+    const post = mockPostStore.get(postId)
+    if (!post) throw { status: 404, detail: '게시물을 찾을 수 없습니다.' }
+    const resolved = resolveMockCaptions(post)
+    return { caption_status: resolved.media[0]?.caption_status ?? 'none' }
+  },
+  async publishPost(postId: string, allowNoCaption: boolean): Promise<Post> {
+    await sleep(400)
+    const post = mockPostStore.get(postId)
+    if (!post) throw { status: 404, detail: '게시물을 찾을 수 없습니다.' }
+    if (post.status === 'published') throw { status: 400, detail: '이미 공개된 게시물이에요.' }
+    const resolved = resolveMockCaptions(post)
+    const captionStatus = resolved.media[0]?.caption_status ?? 'none'
+    if (captionStatus === 'processing') throw { status: 409, detail: '자막을 만드는 중입니다. 잠시 후 다시 시도해 주세요.' }
+    if (captionStatus === 'failed' && !allowNoCaption) throw { status: 400, detail: '자막 생성에 실패했어요. 자막 없이 게시할까요?' }
+    const updated: Post = { ...resolved, status: 'published', published_at: new Date().toISOString() }
+    mockPostStore.set(postId, updated)
+    return updated
   },
   async createPost(content: string): Promise<Post> {
     await sleep(600)
@@ -317,13 +386,15 @@ export async function uploadImages(files: File[]): Promise<UploadedMedia[]> {
   return items
 }
 
-// mp4/webm/quicktime, 200MB 이하, 3분 이하(durationSeconds) — 업로드 시점에 자막 생성이 자동 시작된다
-export async function uploadVideo(file: File, durationSeconds: number): Promise<UploadedMedia> {
-  if (IS_MOCK) return mockPosts.uploadVideo()
+// mp4/webm/quicktime, 200MB 이하, 3분 이하(durationSeconds) — 업로드 시점에 processing 상태의
+// Post 드래프트가 함께 생성되고 자막 생성이 자동 시작된다. 이미지와 달리 이 media_id는
+// POST /posts의 media_ids로 다시 붙일 수 없다 — publishPost()로 이 드래프트를 그대로 게시해야 한다.
+export async function uploadVideo(file: File, durationSeconds: number): Promise<UploadedVideo> {
+  if (IS_MOCK) return mockPosts.uploadVideo(file)
   const formData = new FormData()
   formData.append('file', file)
   formData.append('duration_seconds', String(durationSeconds))
-  return authedRequest<UploadedMedia>('/api/v1/media/videos', { method: 'POST', body: formData })
+  return authedRequest<UploadedVideo>('/api/v1/media/videos', { method: 'POST', body: formData })
 }
 
 export async function createPost(content: string, mediaIds: string[] = []): Promise<Post> {
@@ -332,6 +403,45 @@ export async function createPost(content: string, mediaIds: string[] = []): Prom
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content, media_ids: mediaIds }),
+  })
+}
+
+// 영상 드래프트(processing 상태 Post)의 본문을 채운다 — POST /media/videos, POST .../publish
+// 어느 쪽도 content를 받지 않으므로, 텍스트는 이 PATCH로 드래프트에 미리 채워둬야 한다.
+export async function updatePost(postId: string, content: string): Promise<Post> {
+  if (IS_MOCK) return mockPosts.updatePost(postId, content)
+  return authedRequest<Post>(`/api/v1/posts/${postId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  })
+}
+
+export async function getCaptionStatus(postId: string): Promise<{ caption_status: AiStatus }> {
+  if (IS_MOCK) return mockPosts.getCaptionStatus(postId)
+  return authedRequest<{ caption_status: AiStatus }>(`/api/v1/posts/${postId}/caption-status`)
+}
+
+// 자막이 processing → done/failed로 바뀔 때까지 폴링 — 게시(publish)는 자막 생성이 끝난
+// 뒤에만 가능하다(processing이면 409). 약 30초(15회 × 2초) 후에도 processing이면 그대로 반환하고
+// 호출부가 "잠시 후 다시 시도" 안내를 하도록 한다.
+export async function waitForCaptionReady(postId: string): Promise<AiStatus> {
+  for (let attempt = 0; attempt < 15; attempt++) {
+    const { caption_status } = await getCaptionStatus(postId)
+    if (caption_status !== 'processing') return caption_status
+    await sleep(2000)
+  }
+  return 'processing'
+}
+
+// 영상 드래프트를 실제로 공개한다. 자막이 failed 상태면 서버가 400으로 막으며, 사용자가
+// "자막 없이 게시"를 명시적으로 선택했을 때만 allowNoCaption=true로 우회할 수 있다(CAPTION-01 정책).
+export async function publishPost(postId: string, allowNoCaption = false): Promise<Post> {
+  if (IS_MOCK) return mockPosts.publishPost(postId, allowNoCaption)
+  return authedRequest<Post>(`/api/v1/posts/${postId}/publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ allow_no_caption: allowNoCaption }),
   })
 }
 

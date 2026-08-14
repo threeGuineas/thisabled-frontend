@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import styles from './DefaultWriteScreen.styles'
-import { uploadImages, uploadVideo, createPost } from '../../services/posts'
+import { uploadImages, createPost } from '../../services/posts'
 import { FILTERS } from '../../utils/category'
 import { getVideoDuration, MAX_VIDEO_BYTES, MAX_VIDEO_DURATION_SECONDS, ALLOWED_VIDEO_TYPES } from '../../utils/video'
+import { useVideoPost } from '../../hooks/useVideoPost'
 import Toast from '../../components/Toast'
 import backIcon from '../../assets/images/back.svg'
 import imageIcon from '../../assets/images/image.svg'
@@ -30,6 +31,7 @@ export default function DefaultWriteScreen({ onBack }: Props) {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
+  const videoPost = useVideoPost()
 
   // 이전 preview URL 해제 (메모리 누수 방지)
   useEffect(() => {
@@ -108,15 +110,17 @@ export default function DefaultWriteScreen({ onBack }: Props) {
     setSubmitError(null)
 
     try {
-      let mediaIds: string[] = []
       if (videoFile) {
-        const uploaded = await uploadVideo(videoFile, Math.round(videoDuration))
-        mediaIds = [uploaded.media_id]
-      } else if (imageFiles.length > 0) {
-        const uploaded = await uploadImages(imageFiles)
-        mediaIds = uploaded.map((m) => m.media_id)
+        const post = await videoPost.publish(videoFile, Math.round(videoDuration), content.trim())
+        if (!post) return
+      } else {
+        let mediaIds: string[] = []
+        if (imageFiles.length > 0) {
+          const uploaded = await uploadImages(imageFiles)
+          mediaIds = uploaded.map((m) => m.media_id)
+        }
+        await createPost(content.trim(), mediaIds)
       }
-      await createPost(content.trim(), mediaIds)
       setShowSuccessToast(true)
       setTimeout(onBack, 1500)
     } catch (err: unknown) {
@@ -124,6 +128,16 @@ export default function DefaultWriteScreen({ onBack }: Props) {
       setSubmitError(e.detail ?? '게시글 등록에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handlePublishWithoutCaption = async () => {
+    setIsSubmitting(true)
+    const post = await videoPost.publishWithoutCaption()
+    setIsSubmitting(false)
+    if (post) {
+      setShowSuccessToast(true)
+      setTimeout(onBack, 1500)
     }
   }
 
@@ -212,6 +226,22 @@ export default function DefaultWriteScreen({ onBack }: Props) {
         )}
 
         {submitError && <p className={styles.errorText}>{submitError}</p>}
+        {videoPost.error && <p className={styles.errorText}>{videoPost.error}</p>}
+        {videoPost.phase === 'caption-failed' && (
+          <>
+            <p className={styles.errorText}>자막을 만들지 못했어요. 자막 없이 올릴까요?</p>
+            <div className="px-5 pb-3">
+              <button
+                type="button"
+                onClick={handlePublishWithoutCaption}
+                disabled={isSubmitting}
+                className={styles.submitButtonActive}
+              >
+                <span className={styles.submitTextActive}>{isSubmitting ? '게시 중...' : '자막 없이 게시하기'}</span>
+              </button>
+            </div>
+          </>
+        )}
 
         <input
           ref={fileInputRef}
