@@ -131,7 +131,7 @@ function App() {
     <button
       type="button"
       onClick={() => setScreen('test')}
-      className="fixed bottom-6 right-4 z-50 rounded-full bg-[#000000] px-3 py-1.5 text-xs font-bold text-white shadow-lg active:bg-[#333]"
+      className="fixed top-1/2 right-1 -translate-y-1/2 z-50 rounded-full bg-[#000000] px-2.5 py-1 text-[10px] font-bold text-white opacity-70 shadow-lg active:opacity-100"
     >
       DEV
     </button>
