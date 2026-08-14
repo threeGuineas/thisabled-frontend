@@ -59,14 +59,14 @@ const styles = {
   commentTime: [typography.xs, typography.medium, 'text-[#B3B3BD]'].join(' '),
   commentBody: [typography.base, typography.regular, 'text-black leading-relaxed whitespace-pre-wrap'].join(' '),
 
-  inputBar: [colors.bg.white, 'fixed bottom-0 left-0 right-0 flex items-center gap-2 px-4 py-2 shadow-[0_-2px_8px_rgba(0,0,0,0.04)]'].join(' '),
+  inputBar: [colors.bg.white, 'fixed bottom-0 left-0 right-0 flex items-center gap-2 px-3 py-2 shadow-[0_-2px_8px_rgba(0,0,0,0.04)]'].join(' '),
   textInput: [
-    colors.bg.gray04, 'flex-1 rounded-full px-5 py-2.5 outline-none text-black placeholder:text-[#9898A8]',
+    colors.bg.gray04, 'min-w-0 flex-1 rounded-full px-4 py-2 outline-none text-black placeholder:text-[#9898A8]',
     typography.base, typography.regular,
   ].join(' '),
-  sendButton: 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
-  sendButtonActive: [colors.bg.green, 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0'].join(' '),
-  sendButtonInactive: [colors.bg.gray03, 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0'].join(' '),
+  sendButton: 'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0',
+  sendButtonActive: [colors.bg.green, 'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0'].join(' '),
+  sendButtonInactive: [colors.bg.gray03, 'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0'].join(' '),
   sendIcon: 'w-4 h-4',
 
   // 댓글 게시 전 확인
