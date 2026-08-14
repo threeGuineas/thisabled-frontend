@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import styles from './DevPostDetailScreen.styles'
+import typography from '../../styles/typography'
+import colors from '../../styles/colors'
 import {
   getComments,
   createComment,
   type Comment,
   type Post,
 } from '../../services/posts'
-import { simplifyText } from '../../services/comm'
+import { simplifyText, getCommentSuggestions } from '../../services/comm'
 import type { MeProfile } from '../../services/users'
 import { useProfileModal } from '../../hooks/useProfileModal'
 import type { ProfileModalUser } from '../../components/BlindUserProfileModal'
@@ -39,7 +41,7 @@ interface Props {
   onMessage: (user: ProfileModalUser) => void
 }
 
-// DEV-01: 화면 하나에 주요 행동(댓글 등록)을 강조하고, COMM-01(쉬운 문장 변환)을 기본 노출한다.
+// DEV-01: 화면 하나에 주요 행동(댓글 등록)을 강조하고, COMM-01(쉬운 문장 변환)·COMM-03(댓글 추천)을 기본 노출한다.
 export default function DevPostDetailScreen({ post, me, onBack, onToggleLike, onCommentCountChange, onMessage }: Props) {
   const { openProfile, profileModal } = useProfileModal(onMessage, 'developmental')
   const { noticeOpen, runWithNotice, confirmNotice, cancelNotice } = useAiNotice()
@@ -58,6 +60,12 @@ export default function DevPostDetailScreen({ post, me, onBack, onToggleLike, on
   const [simplifiedText, setSimplifiedText] = useState<string | null>(null)
   const [isSimplifying, setIsSimplifying] = useState(false)
   const [simplifyError, setSimplifyError] = useState<string | null>(null)
+
+  // COMM-03 — 게시물 맥락 기반 댓글 후보 제안. 선택해도 입력창에 채우기만 하고 자동 게시하지 않는다.
+  const [showCommentAiPanel, setShowCommentAiPanel] = useState(false)
+  const [commentSuggestions, setCommentSuggestions] = useState<string[] | null>(null)
+  const [isLoadingCommentAi, setIsLoadingCommentAi] = useState(false)
+  const [commentAiError, setCommentAiError] = useState<string | null>(null)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -102,6 +110,31 @@ export default function DevPostDetailScreen({ post, me, onBack, onToggleLike, on
         setIsSimplifying(false)
       }
     })
+  }
+
+  // COMM-03: 버튼을 직접 눌렀을 때만 게시물 맥락을 바탕으로 댓글 후보를 요청한다(COMM-05)
+  const handleOpenCommentAiPanel = () => {
+    setShowCommentAiPanel(true)
+    if (commentSuggestions) return
+    runWithNotice(async () => {
+      setIsLoadingCommentAi(true)
+      setCommentAiError(null)
+      try {
+        const result = await getCommentSuggestions(post.id)
+        setCommentSuggestions(result.suggestions)
+      } catch (err: unknown) {
+        const e = err as { detail?: string }
+        setCommentAiError(e.detail ?? 'AI 추천을 불러오지 못했어요.')
+      } finally {
+        setIsLoadingCommentAi(false)
+      }
+    })
+  }
+
+  // 후보를 선택하면 입력창에 채우기만 하고, 사용자가 확인 후 직접 등록한다(COMM-03)
+  const applyCommentSuggestion = (text: string) => {
+    setCommentText(text)
+    setShowCommentAiPanel(false)
   }
 
   const handleSubmitComment = async () => {
@@ -224,9 +257,19 @@ export default function DevPostDetailScreen({ post, me, onBack, onToggleLike, on
       <div className={styles.divider} />
 
       <div className={styles.commentsSection}>
-        <span className={styles.commentsHeader}>
-          댓글 <span className={styles.commentsHeaderCount}>{comments.length}</span>
-        </span>
+        <div className="flex items-center justify-between gap-3">
+          <span className={styles.commentsHeader}>
+            댓글 <span className={styles.commentsHeaderCount}>{comments.length}</span>
+          </span>
+          <button
+            type="button"
+            onClick={handleOpenCommentAiPanel}
+            className={[colors.bg.green01, 'flex items-center gap-1.5 rounded-full px-3.5 py-2 active:opacity-80'].join(' ')}
+          >
+            <img src={chatIcon} alt="" className="w-4 h-4" />
+            <span className={[typography.sm, typography.bold, colors.text.green].join(' ')}>댓글 추천 받기</span>
+          </button>
+        </div>
 
         {isLoading ? (
           <div className={styles.emptyState}>
@@ -325,6 +368,40 @@ export default function DevPostDetailScreen({ post, me, onBack, onToggleLike, on
                 {isSubmitting ? '올리는 중...' : '올리기'}
               </button>
             </div>
+          </div>
+        </>
+      )}
+
+      {/* COMM-03 댓글 추천 AI 패널 */}
+      {showCommentAiPanel && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setShowCommentAiPanel(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-50 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white px-6 pt-6 pb-10 shadow-2xl">
+            <p className={[typography.lg, typography.bold, 'text-black text-center mb-1'].join(' ')}>댓글 추천 AI</p>
+            <p className={[typography.sm, typography.regular, colors.text.gray01, 'text-center mb-5'].join(' ')}>
+              눌러서 입력창에 채워 넣을 수 있어요. 내용은 등록 전에 다시 확인해요.
+            </p>
+
+            {isLoadingCommentAi ? (
+              <p className={[typography.base, typography.medium, colors.text.gray01, 'text-center py-6'].join(' ')}>생각하는 중이에요...</p>
+            ) : commentAiError ? (
+              <p className={[typography.sm, typography.medium, 'text-red-500 text-center py-6'].join(' ')}>{commentAiError}</p>
+            ) : (
+              commentSuggestions && commentSuggestions.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {commentSuggestions.map((suggestion, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => applyCommentSuggestion(suggestion)}
+                      className={['w-full text-left rounded-2xl border-2', colors.border.gray03, 'px-4 py-3.5 active:opacity-80'].join(' ')}
+                    >
+                      <span className={[typography.base, typography.medium, 'text-black leading-relaxed'].join(' ')}>{suggestion}</span>
+                    </button>
+                  ))}
+                </div>
+              )
+            )}
           </div>
         </>
       )}

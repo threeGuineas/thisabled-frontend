@@ -44,6 +44,10 @@ const mockComm = {
     await sleep(500)
     return { suggestions: ['네, 좋아요!', '조금 더 생각해볼게요.', '저도 반가워요.'] }
   },
+  async comments(): Promise<SuggestionsResult> {
+    await sleep(500)
+    return { suggestions: ['멋져요!', '저도 그렇게 생각해요.', '응원할게요!'] }
+  },
   async hints(): Promise<HintsResult> {
     await sleep(500)
     return { hints: ['먼저 인사로 시작해 보세요', '궁금한 점을 물어봐도 좋아요', '부담되면 거절해도 괜찮아요'] }
@@ -97,5 +101,15 @@ export function getConversationHints(roomId: string): Promise<HintsResult> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ room_id: roomId }),
+  })
+}
+
+// COMM-03: 게시물 댓글 후보 제안 — 서버가 자동으로 입력창에 채우거나 게시하지 않는다
+export function getCommentSuggestions(postId: string): Promise<SuggestionsResult> {
+  if (IS_MOCK) return mockComm.comments()
+  return authedRequest<SuggestionsResult>('/api/v1/comm/comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ post_id: postId }),
   })
 }
