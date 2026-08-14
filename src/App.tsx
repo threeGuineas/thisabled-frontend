@@ -10,7 +10,7 @@ import DevHomeScreen from './screens/developmental/DevHomeScreen'
 import TestScreen from './screens/auth/TestScreen'
 import Toast from './components/Toast'
 import { type DisabilityType, tokenStorage } from './services/auth'
-import { setMode } from './services/users'
+import { setMode, getMe } from './services/users'
 
 type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome' | 'defaultHome' | 'hearingHome' | 'developmentalHome'
 
@@ -43,11 +43,21 @@ function App() {
     }, 1500)
   }
 
+  // 백엔드 LoginResponse에는 ui_mode가 없으므로 로그인 직후 /users/me를 조회해 라우팅한다
+  // (기가입자는 가입 시 ui_mode를 필수로 선택하므로 항상 값이 존재함)
+  const routeToHomeAfterLogin = async () => {
+    let mode: DisabilityType = 'visual'
+    try {
+      const me = await getMe()
+      mode = me.ui_mode
+    } catch {
+      // 프로필 조회 실패 시에도 로그인 자체는 성공했으므로 기본 홈으로 보낸다
+    }
+    showToast('로그인이 완료되었습니다.', () => setScreen(homeScreenFor(mode)))
+  }
+
   const handleLoginSuccess = () => {
-    showToast('로그인이 완료되었습니다.', () => {
-      setScreen('blindHome')
-      // TODO: 다른 장애 유형 화면 구현 후 라우팅 추가
-    })
+    routeToHomeAfterLogin()
   }
 
   const handleKakaoNewUser = (token: string) => {
@@ -111,9 +121,10 @@ function App() {
       const token = params.get('access_token')
       if (token) {
         tokenStorage.set(token)
-        showToast('로그인이 완료되었습니다.', () => setScreen('blindHome'))
+        routeToHomeAfterLogin()
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const devTab = import.meta.env.DEV && screen !== 'test' && (

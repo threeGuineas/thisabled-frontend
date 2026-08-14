@@ -142,7 +142,7 @@ export function updateMe(patch: UpdateMePayload): Promise<MeProfile> {
   })
 }
 
-// 로그인된 유저의 프로필 조회 (로그인 직후 라우팅 판단용이 아님 — 마이페이지 등에서 사용)
+// 로그인된 유저의 프로필 조회 — 마이페이지 조회, 로그인 직후 ui_mode 기반 홈 화면 라우팅 등에 사용
 export function getMe(): Promise<MeProfile> {
   if (IS_MOCK) return mockUsers.getMe()
   return authedRequest<MeProfile>('/api/v1/users/me')
