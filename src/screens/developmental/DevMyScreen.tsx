@@ -5,20 +5,23 @@ import modeIcon from '../../assets/images/mode.svg'
 import checkGreenIcon from '../../assets/images/check-green.svg'
 import friendIcon from '../../assets/images/friend.svg'
 import backIcon from '../../assets/images/back.svg'
+import chevronIcon from '../../assets/images/next.svg'
 import {
-  getMe, updateMe, setMode, updateSettings, deleteAccount,
-  type MeProfile,
+  getMe, updateMe, setMode, getTags, setTags, updateSettings, deleteAccount,
+  type MeProfile, type Tag,
 } from '../../services/users'
 import { uploadImages } from '../../services/media'
 import { logout, tokenStorage } from '../../services/auth'
 import { getFriends, getBlocks, unfriend, unblockUser } from '../../services/friends'
 import type { Author } from '../../services/posts'
 import { avatarUrlFor } from '../../utils/avatar'
+import { groupByCategory } from '../../utils/tags'
 
 const NICKNAME_REGEX = /^[가-힣a-zA-Z0-9]{2,12}$/
 const BIO_MAX_LENGTH = 300
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const TAG_MAX_COUNT = 10
 
 const MODES = [
   { id: 'default',       title: '기본화면', desc: '표준 인터페이스' },
@@ -28,7 +31,7 @@ const MODES = [
 ] as const
 
 type ModeId = typeof MODES[number]['id']
-type View = 'main' | 'editProfile' | 'withdraw' | 'contacts'
+type View = 'main' | 'editProfile' | 'tags' | 'withdraw' | 'contacts'
 type PostsAction = 'anonymize' | 'delete'
 
 interface Props {
@@ -37,7 +40,8 @@ interface Props {
   onModeChanged: (mode: ModeId) => void
 }
 
-// DEV-01: 정보와 선택지를 줄이고 큰 버튼을 쓴다 — 관심사 태그 편집처럼 단계가 많은 기능은 생략했다.
+// DEV-01: 정보와 선택지를 줄이고 큰 버튼을 쓴다. 관심사 태그처럼 목록이 긴 기능은
+// 카테고리를 접어두고 하나씩 펼쳐보게 해 한 화면에 보이는 선택지 수를 줄인다.
 export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('my')
   const [view, setView] = useState<View>('main')
@@ -55,6 +59,11 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
 
   useEffect(() => {
     getMe().then(setMe).catch(() => setMeError('프로필을 불러오지 못했어요.'))
+  }, [])
+
+  // 첫 진입(마운트) 시에만 스크롤을 맨 위로 — 하위 화면 전환마다 매번 초기화하지는 않는다
+  useEffect(() => {
+    window.scrollTo(0, 0)
   }, [])
 
   const handleTabChange = (tab: Tab) => {
@@ -116,6 +125,10 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
     return <ProfileEditView me={me} onSaved={(updated) => { setMe(updated); setView('main') }} onBack={() => setView('main')} />
   }
 
+  if (view === 'tags' && me) {
+    return <TagsEditView me={me} onSaved={(updated) => { setMe(updated); setView('main') }} onBack={() => setView('main')} />
+  }
+
   if (view === 'withdraw') {
     return <WithdrawView onWithdrawn={onLoggedOut} onBack={() => setView('main')} />
   }
@@ -147,6 +160,26 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
               <span className={styles.editButtonText}>편집</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.tagsSectionHeader}>
+          <span className={styles.tagsSectionTitle}>관심사 태그</span>
+          <button type="button" disabled={!me} onClick={() => setView('tags')} className={styles.editButton}>
+            <span className={styles.editButtonText}>편집</span>
+          </button>
+        </div>
+        <div className={styles.tagsCard}>
+          {me && me.tags.length > 0 ? (
+            <div className={styles.tagsChipRow}>
+              {me.tags.map((tag) => (
+                <span key={tag.code} className={styles.tagsDisplayChip}>{tag.label}</span>
+              ))}
+            </div>
+          ) : (
+            <span className={styles.tagsEmptyText}>아직 등록한 관심사 태그가 없어요.</span>
+          )}
         </div>
       </div>
 
@@ -261,6 +294,10 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
   const [apiError, setApiError] = useState('')
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -381,6 +418,129 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
   )
 }
 
+// ── 관심사 태그 편집 ────────────────────────────────────────────────────
+interface TagsEditViewProps {
+  me: MeProfile
+  onSaved: (updated: MeProfile) => void
+  onBack: () => void
+}
+
+function TagsEditView({ me, onSaved, onBack }: TagsEditViewProps) {
+  const [tagCatalog, setTagCatalog] = useState<Tag[]>([])
+  const [tagsLoading, setTagsLoading] = useState(true)
+  const [tagsError, setTagsError] = useState('')
+  const [selectedTagCodes, setSelectedTagCodes] = useState<string[]>(me.tags.map((t) => t.code))
+  const [openCategory, setOpenCategory] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
+  useEffect(() => {
+    getTags()
+      .then((res) => setTagCatalog(res.tags))
+      .catch(() => setTagsError('관심사 태그를 불러오지 못했어요.'))
+      .finally(() => setTagsLoading(false))
+  }, [])
+
+  const categories = groupByCategory(tagCatalog)
+
+  const toggleCategory = (category: string) => {
+    setOpenCategory((prev) => (prev === category ? null : category))
+  }
+
+  const toggleTag = (code: string) => {
+    setSelectedTagCodes((prev) => {
+      if (prev.includes(code)) return prev.filter((c) => c !== code)
+      if (prev.length >= TAG_MAX_COUNT) return prev
+      return [...prev, code]
+    })
+  }
+
+  const handleSave = async () => {
+    if (saving) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      const updated = await setTags(selectedTagCodes)
+      onSaved(updated)
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; detail?: string }
+      if (apiErr?.status === 400) setSaveError(apiErr.detail ?? `관심사 태그는 최대 ${TAG_MAX_COUNT}개까지 고를 수 있어요.`)
+      else if (apiErr?.status === 404) setSaveError('선택한 태그 정보가 오래됐어요. 다시 골라주세요.')
+      else setSaveError('저장 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className={styles.subContainer}>
+      <div className={styles.subHeader}>
+        <button type="button" onClick={onBack} className={styles.subBackButton} aria-label="뒤로 가기">
+          <img src={backIcon} alt="" className={styles.subBackIcon} />
+        </button>
+        <span className={styles.subHeaderTitle}>관심사 태그</span>
+      </div>
+
+      <div className={styles.tagEditBody}>
+        <span className={styles.tagEditCounter}>{selectedTagCodes.length}/{TAG_MAX_COUNT}개 골랐어요</span>
+
+        {tagsLoading && <span className={styles.tagsEmptyText}>불러오는 중...</span>}
+        {tagsError && <p className={styles.editFieldError}>{tagsError}</p>}
+
+        {!tagsLoading && !tagsError && categories.map((group) => {
+          const isOpen = openCategory === group.category
+          const selectedCount = group.tags.filter((tag) => selectedTagCodes.includes(tag.code)).length
+          return (
+            <div key={group.category} className={styles.categoryGroup}>
+              <button
+                type="button"
+                onClick={() => toggleCategory(group.category)}
+                className={isOpen ? styles.categoryButtonOpen : styles.categoryButton}
+              >
+                <span className={styles.categoryButtonLeft}>
+                  <span className={styles.categoryLabel}>{group.category}</span>
+                  {selectedCount > 0 && <span className={styles.categoryCount}>{selectedCount}</span>}
+                </span>
+                <img src={chevronIcon} alt="" className={isOpen ? styles.categoryChevronOpen : styles.categoryChevron} />
+              </button>
+
+              {isOpen && (
+                <div className={styles.tagPanel}>
+                  {group.tags.map((tag) => {
+                    const isSelected = selectedTagCodes.includes(tag.code)
+                    const isDisabled = !isSelected && selectedTagCodes.length >= TAG_MAX_COUNT
+                    return (
+                      <button
+                        key={tag.code}
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() => toggleTag(tag.code)}
+                        className={isSelected ? styles.tagChipSelected : isDisabled ? styles.tagChipDisabled : styles.tagChip}
+                      >
+                        {tag.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {saveError && <p className={styles.editApiError}>{saveError}</p>}
+
+        <button type="button" disabled={saving} onClick={handleSave} className={styles.editSaveButton}>
+          <span className={styles.editSaveButtonText}>{saving ? '저장하는 중...' : '저장하기'}</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── 회원 탈퇴 ──────────────────────────────────────────────────────────
 interface WithdrawViewProps {
   onWithdrawn: () => void
@@ -392,6 +552,10 @@ function WithdrawView({ onWithdrawn, onBack }: WithdrawViewProps) {
   const [confirming, setConfirming] = useState(false)
   const [withdrawing, setWithdrawing] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   const handleWithdraw = async () => {
     if (withdrawing) return

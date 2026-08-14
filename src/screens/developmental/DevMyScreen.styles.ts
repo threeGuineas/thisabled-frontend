@@ -99,7 +99,29 @@ const styles = {
   contactsNickname: [typography.base, typography.bold, 'text-black flex-1 truncate'].join(' '),
   contactsActionButton: [typography.sm, typography.bold, colors.text.gray01, 'px-3 py-2'].join(' '),
 
+  // 관심사 태그 — 마이페이지 메인의 요약 카드
+  tagsSectionHeader: 'flex items-center justify-between mb-3',
+  tagsSectionTitle: [typography.lg, typography.bold, 'text-black'].join(' '),
+  tagsCard: [colors.bg.white, 'rounded-3xl shadow-sm p-5'].join(' '),
+  tagsChipRow: 'flex flex-wrap gap-2',
+  tagsDisplayChip: [colors.bg.green01, colors.text.green, 'rounded-full px-4 py-2', typography.base, typography.semibold].join(' '),
   tagsEmptyText: [typography.base, typography.medium, 'text-[#9898A8]'].join(' '),
+
+  // 관심사 태그 편집 — 카테고리를 접어두고 하나씩 펼쳐 선택지를 줄인다(DEV-01)
+  tagEditBody: 'flex flex-col gap-4 px-6 pt-4',
+  tagEditCounter: [typography.base, typography.bold, colors.text.green].join(' '),
+  categoryGroup: 'flex flex-col gap-3',
+  categoryButton: [colors.bg.gray04, 'w-full flex items-center justify-between rounded-2xl px-5 py-5 text-left'].join(' '),
+  categoryButtonOpen: [colors.bg.green01, 'w-full flex items-center justify-between rounded-2xl px-5 py-5 text-left border-2', colors.border.green].join(' '),
+  categoryButtonLeft: 'flex items-center gap-2.5',
+  categoryLabel: [typography.lg, typography.bold, 'text-black'].join(' '),
+  categoryCount: [colors.bg.green, 'min-w-[24px] h-6 px-1.5 rounded-full flex items-center justify-center text-white', typography.xs, typography.bold].join(' '),
+  categoryChevron: 'w-5 h-5 opacity-40',
+  categoryChevronOpen: 'w-5 h-5 opacity-70 rotate-90 transition-transform',
+  tagPanel: 'flex flex-wrap gap-2.5 px-1 pb-1',
+  tagChip: [colors.bg.gray04, 'rounded-full px-4 py-3 text-black', typography.base, typography.semibold].join(' '),
+  tagChipSelected: [colors.bg.green, 'rounded-full px-4 py-3 text-white', typography.base, typography.bold].join(' '),
+  tagChipDisabled: [colors.bg.gray04, 'rounded-full px-4 py-3 text-[#C7C7CC] opacity-60', typography.base, typography.semibold].join(' '),
 
   confirmOverlay: 'fixed inset-0 bg-black/40 z-40',
   confirmModal: 'fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl',

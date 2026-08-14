@@ -40,6 +40,11 @@ export default function DevWriteScreen({ onBack }: Props) {
   const [isCompleting, setIsCompleting] = useState(false)
   const [completeError, setCompleteError] = useState<string | null>(null)
 
+  // 첫 진입(마운트) 시에만 스크롤을 맨 위로 — 글쓰기 ↔ 게시 확인 전환마다 매번 초기화하지는 않는다
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
 

@@ -88,6 +88,11 @@ export default function DevChatScreen({ onTabChange, targetUser, onTargetUserCon
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null)
   const [targetUserError, setTargetUserError] = useState<string | null>(null)
 
+  // 첫 진입(마운트) 시에만 스크롤을 맨 위로 — 목록/요청함 전환마다 매번 초기화하지는 않는다
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
     onTabChange(tab)
