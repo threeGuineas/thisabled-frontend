@@ -256,6 +256,18 @@ const mockPosts = {
     const resolved = resolveMockCaptions(post)
     return { caption_status: resolved.media[0]?.caption_status ?? 'none' }
   },
+  async retryCaption(postId: string): Promise<{ caption_status: AiStatus }> {
+    await sleep(300)
+    const post = mockPostStore.get(postId)
+    if (!post) throw { status: 404, detail: '게시물을 찾을 수 없습니다.' }
+    const mediaItem = post.media[0]
+    if (!mediaItem) throw { status: 404, detail: '영상을 찾을 수 없습니다.' }
+    const media = post.media.map((m) => (m.id === mediaItem.id ? { ...m, caption_status: 'processing' as const } : m))
+    mockPostStore.set(postId, { ...post, media })
+    mockCaptionReadyAt.set(mediaItem.id, Date.now() + 2500)
+    mockCaptionShouldFail.set(mediaItem.id, false)
+    return { caption_status: 'processing' }
+  },
   async publishPost(postId: string, allowNoCaption: boolean): Promise<Post> {
     await sleep(400)
     const post = mockPostStore.get(postId)
@@ -432,6 +444,15 @@ export async function waitForCaptionReady(postId: string): Promise<AiStatus> {
     await sleep(2000)
   }
   return 'processing'
+}
+
+// 자막 생성이 failed로 끝난 뒤 재시도를 트리거한다. 성공하면 caption_status가 다시 processing으로
+// 바뀌므로 호출부는 waitForCaptionReady로 이어서 폴링해야 한다.
+export async function retryCaption(postId: string): Promise<{ caption_status: AiStatus }> {
+  if (IS_MOCK) return mockPosts.retryCaption(postId)
+  return authedRequest<{ caption_status: AiStatus }>(`/api/v1/posts/${postId}/caption/retry`, {
+    method: 'POST',
+  })
 }
 
 // 영상 드래프트를 실제로 공개한다. 자막이 failed 상태면 서버가 400으로 막으며, 사용자가

@@ -50,6 +50,8 @@ const styles = {
   nextButtonInactive: [colors.bg.gray03, 'w-full py-5 rounded-2xl flex items-center justify-center'].join(' '),
   nextButtonTextActive: [typography.lg, typography.bold, 'text-white'].join(' '),
   nextButtonTextInactive: [typography.lg, typography.bold, 'text-[#B3B3BD]'].join(' '),
+  retryButtonActive: [colors.border.green, 'w-full py-5 rounded-2xl border-2 flex items-center justify-center active:opacity-70 disabled:opacity-50'].join(' '),
+  retryButtonTextActive: [typography.lg, typography.bold, colors.text.green].join(' '),
 
   // 확인(게시) 단계
   confirmBody: 'flex-1 flex flex-col gap-5 px-5 pt-6 pb-28',

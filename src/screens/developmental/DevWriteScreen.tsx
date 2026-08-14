@@ -166,6 +166,16 @@ export default function DevWriteScreen({ onBack }: Props) {
     }
   }
 
+  const handleRetryCaption = async () => {
+    setIsSubmitting(true)
+    const post = await videoPost.retry()
+    setIsSubmitting(false)
+    if (post) {
+      setShowSuccessToast(true)
+      setTimeout(onBack, 1500)
+    }
+  }
+
   const canGoNext = content.trim().length > 0
 
   if (step === 'confirm') {
@@ -202,14 +212,24 @@ export default function DevWriteScreen({ onBack }: Props) {
 
           <div className={styles.footer}>
             {videoPost.phase === 'caption-failed' ? (
-              <button
-                type="button"
-                onClick={handlePublishWithoutCaption}
-                disabled={isSubmitting}
-                className={styles.nextButtonActive}
-              >
-                <span className={styles.nextButtonTextActive}>{isSubmitting ? '올리는 중...' : '자막 없이 올리기'}</span>
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleRetryCaption}
+                  disabled={isSubmitting}
+                  className={styles.retryButtonActive}
+                >
+                  <span className={styles.retryButtonTextActive}>{isSubmitting ? '재시도 중...' : '자막 다시 만들기'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePublishWithoutCaption}
+                  disabled={isSubmitting}
+                  className={styles.nextButtonActive}
+                >
+                  <span className={styles.nextButtonTextActive}>{isSubmitting ? '올리는 중...' : '자막 없이 올리기'}</span>
+                </button>
+              </div>
             ) : (
               <button
                 type="button"

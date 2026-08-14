@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { uploadVideo, updatePost, waitForCaptionReady, publishPost, type Post, type AiStatus } from '../services/posts'
+import { uploadVideo, updatePost, waitForCaptionReady, publishPost, retryCaption, type Post, type AiStatus } from '../services/posts'
 
 type Phase = 'idle' | 'submitting' | 'waiting-caption' | 'caption-failed'
 
@@ -62,6 +62,23 @@ export function useVideoPost() {
     }
   }
 
+  // 자막 생성 실패(failed) 후 사용자가 재시도를 선택했을 때 호출한다. 백엔드 재시도 API로
+  // 자막 생성을 다시 트리거한 뒤, 같은 폴링/자동 게시 경로(finishWithStatus)를 그대로 탄다.
+  const retry = async (): Promise<Post | null> => {
+    if (!postId) return null
+    setPhase('waiting-caption')
+    setError(null)
+    try {
+      await retryCaption(postId)
+      return await finishWithStatus(postId, 'processing')
+    } catch (err: unknown) {
+      const e = err as { detail?: string }
+      setError(e.detail ?? '자막 재시도에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setPhase('caption-failed')
+      return null
+    }
+  }
+
   const publishWithoutCaption = async (): Promise<Post | null> => {
     if (!postId) return null
     setPhase('submitting')
@@ -78,5 +95,5 @@ export function useVideoPost() {
     }
   }
 
-  return { phase, error, publish, publishWithoutCaption }
+  return { phase, error, publish, retry, publishWithoutCaption }
 }

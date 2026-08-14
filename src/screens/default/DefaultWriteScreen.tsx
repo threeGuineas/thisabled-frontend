@@ -141,6 +141,16 @@ export default function DefaultWriteScreen({ onBack }: Props) {
     }
   }
 
+  const handleRetryCaption = async () => {
+    setIsSubmitting(true)
+    const post = await videoPost.retry()
+    setIsSubmitting(false)
+    if (post) {
+      setShowSuccessToast(true)
+      setTimeout(onBack, 1500)
+    }
+  }
+
   const canSubmit = content.trim().length > 0 && !isSubmitting
 
   return (
@@ -232,8 +242,16 @@ export default function DefaultWriteScreen({ onBack }: Props) {
         )}
         {videoPost.phase === 'caption-failed' && (
           <>
-            <p className={styles.errorText}>자막을 만들지 못했어요. 자막 없이 올릴까요?</p>
-            <div className="px-5 pb-3">
+            <p className={styles.errorText}>자막을 만들지 못했어요. 다시 시도하거나 자막 없이 올릴 수 있어요.</p>
+            <div className="px-5 pb-3 flex gap-2">
+              <button
+                type="button"
+                onClick={handleRetryCaption}
+                disabled={isSubmitting}
+                className={styles.retryButtonActive}
+              >
+                <span className={styles.retryTextActive}>{isSubmitting ? '재시도 중...' : '자막 다시 만들기'}</span>
+              </button>
               <button
                 type="button"
                 onClick={handlePublishWithoutCaption}

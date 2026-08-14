@@ -16,6 +16,9 @@ const styles = {
   submitTextActive: [typography.sm, typography.bold, 'text-black'].join(' '),
   submitTextInactive: [typography.sm, typography.bold, 'text-[#9898A8]'].join(' '),
 
+  retryButtonActive: ['bg-transparent border-2', colors.border.gray02, 'rounded-full px-4 py-2 active:opacity-70 disabled:opacity-50'].join(' '),
+  retryTextActive: [typography.sm, typography.bold, colors.text.gray02].join(' '),
+
   categorySection: ['px-5 py-3 border-b overflow-x-auto scrollbar-hide', colors.border.gray03].join(' '),
   categoryList: 'flex gap-2 w-max',
   categoryChipActive: [colors.bg.gray02, colors.text.white, 'rounded-full px-4 py-2', typography.sm, typography.bold].join(' '),

@@ -84,6 +84,13 @@ const styles = {
   submitIcon: 'w-5 h-5',
   submitTextActive: ['text-black', typography.base, typography.bold].join(' '),
   submitTextInactive: ['text-[#8A8A8A]', typography.base, typography.bold].join(' '),
+
+  retryButtonActive: [
+    'flex items-center justify-center gap-3',
+    `bg-transparent border-2 ${colors.border.yellow} rounded-2xl px-5 py-5`,
+    'active:opacity-70 transition-opacity disabled:opacity-50',
+  ].join(' '),
+  retryTextActive: [colors.text.yellow, typography.base, typography.bold].join(' '),
 }
 
 export default styles

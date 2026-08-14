@@ -183,6 +183,16 @@ export default function BlindWriteScreen({ onBack }: Props) {
     }
   }
 
+  const handleRetryCaption = async () => {
+    setIsSubmitting(true)
+    const post = await videoPost.retry()
+    setIsSubmitting(false)
+    if (post) {
+      setShowSuccessToast(true)
+      setTimeout(onBack, 1500)
+    }
+  }
+
   return (
     <>
     {showSuccessToast && <Toast message="글 작성이 완료되었습니다." />}
@@ -291,7 +301,15 @@ export default function BlindWriteScreen({ onBack }: Props) {
             )}
             {videoPost.phase === 'caption-failed' && (
               <div className="mx-5 mt-3 flex flex-col gap-2">
-                <p className="text-sm text-red-500">자막을 만들지 못했어요. 자막 없이 올릴까요?</p>
+                <p className="text-sm text-red-500">자막을 만들지 못했어요. 다시 시도하거나 자막 없이 올릴 수 있어요.</p>
+                <button
+                  type="button"
+                  onClick={handleRetryCaption}
+                  disabled={isSubmitting}
+                  className={styles.retryButtonActive}
+                >
+                  <span className={styles.retryTextActive}>{isSubmitting ? '재시도 중...' : '자막 다시 만들기'}</span>
+                </button>
                 <button
                   type="button"
                   onClick={handlePublishWithoutCaption}
