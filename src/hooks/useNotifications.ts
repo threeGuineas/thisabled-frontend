@@ -17,7 +17,7 @@ export function useNotifications(vibrationEnabled = true) {
     let cancelled = false
     getNotifications().then((page) => {
       if (!cancelled) setRecords(page.items)
-    })
+    }).catch(() => {})
 
     const socket = connectNotificationSocket((record) => {
       setRecords((prev) => [record, ...prev])
@@ -31,7 +31,7 @@ export function useNotifications(vibrationEnabled = true) {
   }, [])
 
   const markAsRead = (id: string) => {
-    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, is_read: true } : r)))
+    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, read_at: r.read_at ?? new Date().toISOString() } : r)))
     markNotificationsRead([id]).catch(() => {})
   }
 
