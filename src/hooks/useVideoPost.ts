@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { uploadVideo, updatePost, waitForCaptionReady, publishPost, type Post, type AiStatus } from '../services/posts'
 
-type Phase = 'idle' | 'submitting' | 'caption-failed'
+type Phase = 'idle' | 'submitting' | 'waiting-caption' | 'caption-failed'
+
+// waitForCaptionReady 한 번 호출은 약 30초(15회 × 2초) 폴링 후 processing이면 그대로 반환한다.
+// 실제 자막 생성(AI)이 30초보다 오래 걸리는 경우가 흔해서, 사용자가 다시 게시 버튼을 누르게
+// 하는 대신 이 총 대기 한도(3분) 안에서는 자동으로 폴링을 이어간다.
+const MAX_CAPTION_WAIT_MS = 3 * 60 * 1000
 
 // 영상 게시물은 텍스트/사진과 경로가 완전히 다르다(POST /media/videos가 자체적으로
 // processing 드래프트 Post를 만들고, POST /posts/{id}/publish로 공개해야 한다 — POST /posts에
@@ -12,14 +17,21 @@ export function useVideoPost() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState<string | null>(null)
 
-  const finishWithStatus = async (id: string, status: AiStatus): Promise<Post | null> => {
-    if (status === 'processing') status = await waitForCaptionReady(id)
+  const finishWithStatus = async (id: string, status: AiStatus, startedAt = Date.now()): Promise<Post | null> => {
+    if (status === 'processing') {
+      setPhase('waiting-caption')
+      status = await waitForCaptionReady(id)
+    }
 
     if (status === 'failed') {
       setPhase('caption-failed')
       return null
     }
     if (status === 'processing') {
+      // 자막이 아직 안 끝났어도 총 대기 한도 안이면 사용자 재조작 없이 폴링을 계속한다.
+      if (Date.now() - startedAt < MAX_CAPTION_WAIT_MS) {
+        return await finishWithStatus(id, 'processing', startedAt)
+      }
       setError('자막 생성이 오래 걸리고 있어요. 잠시 후 다시 시도해주세요.')
       setPhase('idle')
       return null

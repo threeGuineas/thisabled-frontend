@@ -192,6 +192,9 @@ export default function DevWriteScreen({ onBack }: Props) {
 
             {submitError && <p className={styles.errorText}>{submitError}</p>}
             {videoPost.error && <p className={styles.errorText}>{videoPost.error}</p>}
+            {videoPost.phase === 'waiting-caption' && (
+              <p className={styles.mediaLoadingText}>자막을 만드는 중이라 조금 오래 걸려요. 잠시만 기다려주세요.</p>
+            )}
             {videoPost.phase === 'caption-failed' && (
               <p className={styles.errorText}>자막을 만들지 못했어요. 자막 없이 올릴까요?</p>
             )}
@@ -214,7 +217,9 @@ export default function DevWriteScreen({ onBack }: Props) {
                 disabled={isSubmitting}
                 className={styles.nextButtonActive}
               >
-                <span className={styles.nextButtonTextActive}>{isSubmitting ? '올리는 중...' : '올리기'}</span>
+                <span className={styles.nextButtonTextActive}>
+                  {isSubmitting ? (videoPost.phase === 'waiting-caption' ? '자막 만드는 중...' : '올리는 중...') : '올리기'}
+                </span>
               </button>
             )}
           </div>

@@ -286,6 +286,9 @@ export default function BlindWriteScreen({ onBack }: Props) {
             {videoPost.error && (
               <p className="mx-5 mt-2 text-sm text-red-500">{videoPost.error}</p>
             )}
+            {videoPost.phase === 'waiting-caption' && (
+              <p className="mx-5 mt-2 text-sm text-gray-500">자막을 만드는 중이라 게시가 조금 오래 걸려요. 잠시만 기다려주세요.</p>
+            )}
             {videoPost.phase === 'caption-failed' && (
               <div className="mx-5 mt-3 flex flex-col gap-2">
                 <p className="text-sm text-red-500">자막을 만들지 못했어요. 자막 없이 올릴까요?</p>
@@ -361,7 +364,7 @@ export default function BlindWriteScreen({ onBack }: Props) {
             >
               <img src={content.trim() && !isSubmitting ? sendIcon : sendGIcon} alt="글 게시하기" className={styles.submitIcon} />
               <span className={content.trim() && !isSubmitting ? styles.submitTextActive : styles.submitTextInactive}>
-                {isSubmitting ? '게시 중...' : '글 게시하기'}
+                {isSubmitting ? (videoPost.phase === 'waiting-caption' ? '자막 만드는 중...' : '게시 중...') : '글 게시하기'}
               </span>
             </button>
           </div>
