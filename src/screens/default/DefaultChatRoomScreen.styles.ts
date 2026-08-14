@@ -94,7 +94,7 @@ export default function getStyles(theme: ChatRoomScreenTheme = 'default') {
     inputBar: 'flex items-center gap-2 px-3 py-2.5',
     attachButton: [colors.bg.gray04, 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-30'].join(' '),
     attachIcon: 'w-5 h-5',
-    textInputWrapper: [colors.bg.gray04, 'flex-1 rounded-full px-4 py-2.5 min-w-0'].join(' '),
+    textInputWrapper: [colors.bg.gray04, 'flex items-center flex-1 rounded-full px-4 py-2.5 min-w-0'].join(' '),
     textInput: [
       'w-full bg-transparent outline-none text-black placeholder:text-[#9898A8] resize-none max-h-24',
       isDev ? typography.base : typography.sm, typography.regular,
