@@ -13,13 +13,15 @@ interface Props {
 // 청각모드 전용 — 소리 대신 화면에 남는 시각 알림 배너. 광고 배너처럼 알림 내용이 옆으로 넘어가며 순환된다.
 export default function NotificationBanner({ notifications, unreadCount, onMoreClick }: Props) {
   const [index, setIndex] = useState(0)
+  const unreadNotifications = notifications.filter((item) => !item.isRead)
 
   useEffect(() => {
+    if (unreadNotifications.length < 2) return
     const timer = setInterval(() => {
-      setIndex((prev) => (prev + 1) % notifications.length)
+      setIndex((prev) => (prev + 1) % unreadNotifications.length)
     }, ROTATE_INTERVAL_MS)
     return () => clearInterval(timer)
-  }, [notifications.length])
+  }, [unreadNotifications.length])
 
   if (unreadCount <= 0) return null
 
@@ -34,9 +36,9 @@ export default function NotificationBanner({ notifications, unreadCount, onMoreC
         <div className="overflow-hidden h-4">
           <div
             className="flex transition-transform duration-500 ease-in-out"
-            style={{ transform: `translateX(-${index * 100}%)` }}
+            style={{ transform: `translateX(-${(index % unreadNotifications.length) * 100}%)` }}
           >
-            {notifications.map((item, i) => (
+            {unreadNotifications.map((item, i) => (
               <span key={i} className="basis-full shrink-0 flex items-center gap-1.5 min-w-0">
                 <img src={item.icon} alt="" className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate text-xs text-[#00000]/70">{item.message}</span>

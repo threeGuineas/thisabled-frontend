@@ -355,11 +355,11 @@ export default function BlindChatRoomScreen({ room, onBack }: Props) {
 
         <div className={styles.callRow}>
           <button type="button" className={styles.callButton}>
-            <img src={callYIcon} alt="전화" className={styles.callIcon} />
+            <img src={callYIcon} className={styles.callIcon} />
             <span className={styles.callText}>전화</span>
           </button>
           <button type="button" className={styles.videoButton}>
-            <img src={videoYIcon} alt="영상 통화" className={styles.videoIcon} />
+            <img src={videoYIcon} className={styles.videoIcon} />
             <span className={styles.videoText}>영상 통화</span>
           </button>
         </div>
@@ -533,8 +533,8 @@ export default function BlindChatRoomScreen({ room, onBack }: Props) {
             <span className={styles.photoText}>사진 전송</span>
           </button>
           <button type="button" className={styles.voiceButton} onClick={handleOpenVoiceSheet}>
-            <img src={micWIcon} alt="음성 입력" className={styles.voiceIcon} />
-            <span className={styles.voiceText}>음성으로 입력하기</span>
+            <img src={micWIcon} className={styles.voiceIcon} />
+            <span className={styles.voiceText}>음성으로 채팅 입력</span>
           </button>
         </div>
       ) : (

@@ -403,7 +403,7 @@ export default function BlindHomeScreen({ onLoggedOut, onModeChanged }: Props) {
                     >
                       <img
                         src={post.liked_by_me ? heartBIcon : heartWIcon}
-                        alt="좋아요"
+                        alt="좋아요 달기"
                         className={styles.cardFooterIcon}
                       />
                       <span className={post.liked_by_me ? styles.cardFooterTextActive : styles.cardFooterText}>
@@ -415,7 +415,7 @@ export default function BlindHomeScreen({ onLoggedOut, onModeChanged }: Props) {
                       onClick={() => setActivePostId(post.id)}
                       className={styles.cardFooterRight}
                     >
-                      <img src={chatWIcon} alt="댓글" className={styles.cardFooterIcon} />
+                      <img src={chatWIcon} alt="댓글 달기" className={styles.cardFooterIcon} />
                       <span className={styles.cardFooterText}>{post.comment_count}개 | 댓글 보기</span>
                     </button>
                   </div>
