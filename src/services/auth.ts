@@ -94,6 +94,21 @@ const mockAuth = {
 // dev: vite proxy가 /api를 백엔드로 전달하므로 상대 경로 사용. prod: 정적 빌드엔 프록시가 없으므로 백엔드 주소 직접 지정.
 const BASE_URL = import.meta.env.PROD ? (import.meta.env.VITE_BACKEND_URL as string) : ''
 
+// FastAPI는 422 검증 오류에서 detail을 문자열이 아니라 [{type, loc, msg, input}, ...] 배열로 준다.
+// 이걸 그대로 React 자식으로 렌더링하면 "Objects are not valid as a React child"로 앱이 죽으므로
+// 항상 문자열로 정규화해서 던진다.
+function extractDetail(body: unknown, fallback: string): string {
+  const detail = (body as { detail?: unknown } | null)?.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => (item && typeof item === 'object' && 'msg' in item ? String((item as { msg: unknown }).msg) : null))
+      .filter((msg): msg is string => Boolean(msg))
+    if (messages.length > 0) return messages.join(' ')
+  }
+  return fallback
+}
+
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
@@ -102,7 +117,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw { status: res.status, detail: body.detail ?? '오류가 발생했습니다.' }
+    throw { status: res.status, detail: extractDetail(body, '오류가 발생했습니다.') }
   }
   return res.json() as Promise<T>
 }
@@ -139,7 +154,7 @@ export async function authedRequest<T>(path: string, init: RequestInit = {}): Pr
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw { status: res.status, detail: body.detail ?? '오류가 발생했습니다.' }
+    throw { status: res.status, detail: extractDetail(body, '오류가 발생했습니다.') }
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
@@ -186,7 +201,7 @@ export async function initiateKakaoLogin(): Promise<KakaoCallbackResponse | null
     const res = await fetch(pathname + search, { credentials: 'include' })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      throw { status: res.status, detail: body.detail ?? '오류가 발생했습니다.' }
+      throw { status: res.status, detail: extractDetail(body, '오류가 발생했습니다.') }
     }
     return res.json() as Promise<KakaoCallbackResponse>
   }
