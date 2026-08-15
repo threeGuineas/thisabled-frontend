@@ -227,14 +227,18 @@ export default function DevPostDetailScreen({ post, me, onBack, onToggleLike, on
 
         {post.media.length > 0 && (
           <div className={styles.mediaList}>
-            {post.media.map((media) => (
-              <img
-                key={media.id}
-                src={resolveImageUrl(media.url)}
-                alt={media.description ?? ''}
-                className={styles.mediaImage}
-              />
-            ))}
+            {post.media.map((media) =>
+              media.media_type === 'video' ? (
+                <video key={media.id} src={resolveImageUrl(media.url)} controls className={styles.mediaImage} />
+              ) : (
+                <img
+                  key={media.id}
+                  src={resolveImageUrl(media.url)}
+                  alt={media.description ?? ''}
+                  className={styles.mediaImage}
+                />
+              ),
+            )}
           </div>
         )}
 
