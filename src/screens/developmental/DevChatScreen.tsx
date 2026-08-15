@@ -104,7 +104,7 @@ export default function DevChatScreen({ onTabChange, targetUser, onTargetUserCon
     try {
       const page = await getRooms()
       const withTimes = page.items
-        .map((room): RoomListItem => ({ ...room, lastMessageAt: room.accepted_at ?? room.created_at }))
+        .map((room): RoomListItem => ({ ...room, lastMessageAt: room.last_activity_at }))
         .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
       setRooms(withTimes)
     } catch (err: unknown) {
@@ -181,7 +181,7 @@ export default function DevChatScreen({ onTabChange, targetUser, onTargetUserCon
     try {
       const updated = await acceptChatRequest(room.id)
       setRequests((prev) => prev.filter((r) => r.id !== room.id))
-      setRooms((prev) => [{ ...updated, lastMessageAt: updated.accepted_at ?? updated.created_at }, ...prev])
+      setRooms((prev) => [{ ...updated, lastMessageAt: updated.last_activity_at }, ...prev])
     } catch (err: unknown) {
       const e = err as { detail?: string }
       setRequestsError(e.detail ?? '요청 수락에 실패했어요.')

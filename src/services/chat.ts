@@ -16,6 +16,8 @@ export interface ChatRoom {
   unread_count: number
   accepted_at: string | null
   created_at: string
+  // 방의 마지막 메시지 시각(없으면 room.created_at) — 채팅 목록 정렬·시간 표시에 사용
+  last_activity_at: string
 }
 
 export interface ChatRoomPage {
@@ -106,6 +108,7 @@ function seedIncomingRequest(id: string, nickname: string, content: string, flag
     unread_count: 0,
     accepted_at: null,
     created_at: now,
+    last_activity_at: now,
   }
   const messageId = crypto.randomUUID()
   if (flagged) mockHiddenContent.set(messageId, content)
@@ -152,6 +155,7 @@ function ensureSeeded() {
       unread_count: 0,
       accepted_at: now,
       created_at: now,
+      last_activity_at: now,
     }
     mockRoomsStore.set(room.id, room)
     mockMessagesStore.set(room.id, [])
@@ -170,6 +174,7 @@ function ensureSeeded() {
       unread_count: 0,
       accepted_at: now,
       created_at: now,
+      last_activity_at: now,
     }
     mockRoomsStore.set(room.id, room)
     const flaggedId = crypto.randomUUID()
@@ -237,6 +242,7 @@ const mockChat = {
           unread_count: 0,
           accepted_at: now,
           created_at: now,
+          last_activity_at: now,
         }
       : {
           id: crypto.randomUUID(),
@@ -247,6 +253,7 @@ const mockChat = {
           unread_count: 0,
           accepted_at: null,
           created_at: now,
+          last_activity_at: now,
         }
     mockRoomsStore.set(room.id, room)
     mockMessagesStore.set(room.id, [])
@@ -279,7 +286,8 @@ const mockChat = {
     if (!room || room.state !== 'request' || room.requested_by === MOCK_ME_ID) {
       throw { status: 400, detail: '수락할 수 없는 요청입니다' }
     }
-    const updated: ChatRoom = { ...room, state: 'active', accepted_at: new Date().toISOString() }
+    const now = new Date().toISOString()
+    const updated: ChatRoom = { ...room, state: 'active', accepted_at: now, last_activity_at: now }
     mockRoomsStore.set(roomId, updated)
     return updated
   },
@@ -311,6 +319,7 @@ const mockChat = {
     }
     list.push(message)
     mockMessagesStore.set(roomId, list)
+    mockRoomsStore.set(roomId, { ...room, last_activity_at: message.created_at })
     scheduleMockReadReceipt(roomId, message.id)
     return message
   },
@@ -340,6 +349,7 @@ const mockChat = {
     mockMediaReadyAt.set(message.id, Date.now() + 3000)
     list.push(message)
     mockMessagesStore.set(roomId, list)
+    mockRoomsStore.set(roomId, { ...room, last_activity_at: message.created_at })
     scheduleMockReadReceipt(roomId, message.id)
     return message
   },

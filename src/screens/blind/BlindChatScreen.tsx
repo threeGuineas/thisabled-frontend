@@ -82,7 +82,7 @@ export default function BlindChatScreen({ onTabChange, targetUser, onTargetUserC
       const page = await getRooms()
       // 방 목록 조회 자체는 메시지를 읽음 처리하지 않도록 미리보기용 메시지 조회는 하지 않는다(§chat 문서: 최신 페이지 조회 시 읽음 처리됨)
       const withTimes = page.items
-        .map((room): RoomListItem => ({ ...room, lastMessageAt: room.accepted_at ?? room.created_at }))
+        .map((room): RoomListItem => ({ ...room, lastMessageAt: room.last_activity_at }))
         .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
       setRooms(withTimes)
     } catch (err: unknown) {
@@ -162,7 +162,7 @@ export default function BlindChatScreen({ onTabChange, targetUser, onTargetUserC
     try {
       const updated = await acceptChatRequest(room.id)
       setRequests((prev) => prev.filter((r) => r.id !== room.id))
-      setRooms((prev) => [{ ...updated, lastMessageAt: updated.accepted_at ?? updated.created_at }, ...prev])
+      setRooms((prev) => [{ ...updated, lastMessageAt: updated.last_activity_at }, ...prev])
     } catch (err: unknown) {
       const e = err as { detail?: string }
       setRequestsError(e.detail ?? '요청 수락에 실패했습니다.')
