@@ -188,7 +188,7 @@ export default function DevHomeScreen({ onLoggedOut, onModeChanged }: Props) {
     )
   }
 
-  const visiblePosts = activeFilter === '전체' ? posts : posts.filter((post) => categoryFor(post.id) === activeFilter)
+  const visiblePosts = activeFilter === '전체' ? posts : posts.filter((post) => categoryFor(post.category) === activeFilter)
 
   return (
     <div className={styles.container}>
@@ -240,7 +240,7 @@ export default function DevHomeScreen({ onLoggedOut, onModeChanged }: Props) {
             const isVideo = media?.media_type === 'video'
             return (
               <div key={post.id} className={styles.row} onClick={() => setActivePostId(post.id)}>
-                <span className={styles.rowCategory}>{categoryFor(post.id)}</span>
+                <span className={styles.rowCategory}>{categoryFor(post.category)}</span>
                 <div className={styles.rowTopRow}>
                   {media && (
                     <div className={styles.rowThumbWrapper}>

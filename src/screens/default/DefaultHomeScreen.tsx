@@ -170,7 +170,7 @@ export default function DefaultHomeScreen({ onLoggedOut, onModeChanged }: Props)
     return (
       <DefaultPostDetailScreen
         post={activePost}
-        category={categoryFor(activePost.id)}
+        category={categoryFor(activePost.category)}
         me={me}
         onBack={() => setActivePostId(null)}
         onToggleLike={() => toggleLike(activePost)}
@@ -186,7 +186,7 @@ export default function DefaultHomeScreen({ onLoggedOut, onModeChanged }: Props)
   }
 
   const visiblePosts = posts.filter((post) => {
-    if (activeFilter !== '전체' && categoryFor(post.id) !== activeFilter) return false
+    if (activeFilter !== '전체' && categoryFor(post.category) !== activeFilter) return false
     if (searchQuery.trim() && !post.content.toLowerCase().includes(searchQuery.trim().toLowerCase())) return false
     return true
   })
@@ -245,7 +245,7 @@ export default function DefaultHomeScreen({ onLoggedOut, onModeChanged }: Props)
         <div className={styles.list}>
           {visiblePosts.map((post) => {
             const image = post.media[0]
-            const category = categoryFor(post.id)
+            const category = categoryFor(post.category)
             return (
               <div key={post.id} className={styles.row} onClick={() => setActivePostId(post.id)}>
                 <div className={styles.rowMain}>

@@ -105,7 +105,11 @@ export default function DefaultWriteScreen({ onBack }: Props) {
   }
 
   const handleSubmit = async () => {
-    if (!content.trim() || !category || isSubmitting) return
+    if (!content.trim() || isSubmitting) return
+    if (!category) {
+      setSubmitError('카테고리를 선택해주세요.')
+      return
+    }
     setIsSubmitting(true)
     setSubmitError(null)
 
@@ -152,7 +156,7 @@ export default function DefaultWriteScreen({ onBack }: Props) {
     }
   }
 
-  const canSubmit = content.trim().length > 0 && !!category && !isSubmitting
+  const canSubmit = content.trim().length > 0 && !isSubmitting
 
   return (
     <>

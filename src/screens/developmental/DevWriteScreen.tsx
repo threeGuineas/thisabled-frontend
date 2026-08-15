@@ -181,7 +181,17 @@ export default function DevWriteScreen({ onBack }: Props) {
     }
   }
 
-  const canGoNext = content.trim().length > 0 && !!category
+  const handleNext = () => {
+    if (!content.trim()) return
+    if (!category) {
+      setSubmitError('이야기 종류를 골라 주세요.')
+      return
+    }
+    setSubmitError(null)
+    setStep('confirm')
+  }
+
+  const canGoNext = content.trim().length > 0
 
   if (step === 'confirm') {
     return (
@@ -337,6 +347,7 @@ export default function DevWriteScreen({ onBack }: Props) {
         )}
 
         {mediaError && <p className={styles.errorText}>{mediaError}</p>}
+        {submitError && <p className={styles.errorText}>{submitError}</p>}
 
         <input
           ref={imageInputRef}
@@ -359,7 +370,7 @@ export default function DevWriteScreen({ onBack }: Props) {
       <div className={styles.footer}>
         <button
           type="button"
-          onClick={() => canGoNext && setStep('confirm')}
+          onClick={handleNext}
           disabled={!canGoNext}
           className={canGoNext ? styles.nextButtonActive : styles.nextButtonInactive}
         >

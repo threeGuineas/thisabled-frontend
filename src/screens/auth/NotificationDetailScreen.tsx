@@ -1,12 +1,11 @@
 import styles from './NotificationDetailScreen.styles'
 import backIcon from '../../assets/images/back.svg'
-import type { NotificationItem, NotificationTarget } from '../../utils/notifications'
+import type { NotificationItem } from '../../utils/notifications'
 
 interface Props {
   notifications: NotificationItem[]
   onBack: () => void
   onMarkAsRead: (id: string) => void
-  onNavigate: (target: NotificationTarget) => void
 }
 
 function timeAgo(isoString: string): string {
@@ -19,10 +18,9 @@ function timeAgo(isoString: string): string {
   return `${Math.floor(hours / 24)}일 전`
 }
 
-export default function NotificationDetailScreen({ notifications, onBack, onMarkAsRead, onNavigate }: Props) {
+export default function NotificationDetailScreen({ notifications, onBack, onMarkAsRead }: Props) {
   const handleClick = (item: NotificationItem) => {
     if (!item.isRead) onMarkAsRead(item.id)
-    onNavigate(item.target)
   }
 
   return (

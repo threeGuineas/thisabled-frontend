@@ -10,7 +10,7 @@ import DefaultChatScreen from '../default/DefaultChatScreen'
 import DefaultFriendScreen from '../default/DefaultFriendScreen'
 import { useProfileModal } from '../../hooks/useProfileModal'
 import type { ProfileModalUser } from '../../components/BlindUserProfileModal'
-import { getFeed, getPost, likePost, unlikePost, type Post, type Author } from '../../services/posts'
+import { getFeed, likePost, unlikePost, type Post, type Author } from '../../services/posts'
 import { getMe, type MeProfile } from '../../services/users'
 import { type DisabilityType } from '../../services/auth'
 import { resolveImageUrl, avatarUrlFor } from '../../utils/avatar'
@@ -181,18 +181,6 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
         notifications={notifications}
         onBack={() => setShowNotifications(false)}
         onMarkAsRead={markAsRead}
-        onNavigate={(target) => {
-          setShowNotifications(false)
-          setActiveTab(target.tab)
-          if (target.tab !== 'home' || !target.postId) return
-          const postId = target.postId
-          getPost(postId)
-            .then((post) => {
-              setPosts((prev) => (prev.some((p) => p.id === postId) ? prev : [post, ...prev]))
-              setActivePostId(postId)
-            })
-            .catch(() => {})
-        }}
       />
     )
   }
@@ -202,7 +190,7 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
     return (
       <HearingPostDetailScreen
         post={activePost}
-        category={categoryFor(activePost.id)}
+        category={categoryFor(activePost.category)}
         me={me}
         onBack={() => setActivePostId(null)}
         onToggleLike={() => toggleLike(activePost)}
@@ -218,7 +206,7 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
   }
 
   const visiblePosts = posts.filter((post) => {
-    if (activeFilter !== '전체' && categoryFor(post.id) !== activeFilter) return false
+    if (activeFilter !== '전체' && categoryFor(post.category) !== activeFilter) return false
     if (searchQuery.trim() && !post.content.toLowerCase().includes(searchQuery.trim().toLowerCase())) return false
     return true
   })
@@ -281,7 +269,7 @@ export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props)
         <div className={styles.list}>
           {visiblePosts.map((post) => {
             const image = post.media[0]
-            const category = categoryFor(post.id)
+            const category = categoryFor(post.category)
             return (
               <div key={post.id} className={styles.row} onClick={() => setActivePostId(post.id)}>
                 <div className={styles.rowMain}>
