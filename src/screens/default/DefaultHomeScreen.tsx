@@ -272,11 +272,28 @@ export default function DefaultHomeScreen({ onLoggedOut, onModeChanged }: Props)
                 </div>
 
                 {image && (
-                  <img
-                    src={resolveImageUrl(image.url)}
-                    alt=""
-                    className={styles.rowThumb}
-                  />
+                  image.media_type === 'video' ? (
+                    <div className="relative flex-shrink-0">
+                      <video
+                        src={resolveImageUrl(image.url)}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className={styles.rowThumb}
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/25">
+                        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="white">
+                          <path d="M8 5.5v13l11-6.5z" />
+                        </svg>
+                      </span>
+                    </div>
+                  ) : (
+                    <img
+                      src={resolveImageUrl(image.url)}
+                      alt=""
+                      className={styles.rowThumb}
+                    />
+                  )
                 )}
               </div>
             )

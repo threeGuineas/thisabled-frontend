@@ -368,30 +368,41 @@ export default function BlindHomeScreen({ onLoggedOut, onModeChanged }: Props) {
                   {/* 본문 */}
                   <p className={styles.cardBody}>{post.content}</p>
 
-                  {/* 첨부 이미지 — 있을 때만 표시 */}
+                  {/* 첨부 미디어 — 있을 때만 표시 */}
                   {image && (
-                    <div className={styles.cardImageWrapper}>
-                      <img
-                        src={resolveImageUrl(image.url)}
-                        alt="첨부 이미지"
-                        className={`${styles.cardImage} cursor-pointer`}
-                        onClick={() => setLightboxUrl(resolveImageUrl(image.url))}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleDescribeImage(post, image)}
-                        className={audioState?.postId === post.id ? styles.imageDescribeBtnActive : styles.imageDescribeBtn}
-                        aria-label="음성으로 듣기"
-                      >
-                        {audioState?.postId === post.id && audioState.status === 'loading' ? (
-                          <span className="w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin block" />
-                        ) : audioState?.postId === post.id && audioState.status === 'speaking' ? (
-                          <span className="w-3 h-3 rounded-full bg-[#FFD60A] animate-pulse block" />
-                        ) : (
-                          <img src={micWIcon} alt="" className={styles.imageDescribeBtnIcon} />
-                        )}
-                      </button>
-                    </div>
+                    image.media_type === 'video' ? (
+                      <div className={styles.cardImageWrapper}>
+                        <video
+                          src={resolveImageUrl(image.url)}
+                          controls
+                          playsInline
+                          className={styles.cardImage}
+                        />
+                      </div>
+                    ) : (
+                      <div className={styles.cardImageWrapper}>
+                        <img
+                          src={resolveImageUrl(image.url)}
+                          alt="첨부 이미지"
+                          className={`${styles.cardImage} cursor-pointer`}
+                          onClick={() => setLightboxUrl(resolveImageUrl(image.url))}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleDescribeImage(post, image)}
+                          className={audioState?.postId === post.id ? styles.imageDescribeBtnActive : styles.imageDescribeBtn}
+                          aria-label="음성으로 듣기"
+                        >
+                          {audioState?.postId === post.id && audioState.status === 'loading' ? (
+                            <span className="w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin block" />
+                          ) : audioState?.postId === post.id && audioState.status === 'speaking' ? (
+                            <span className="w-3 h-3 rounded-full bg-[#FFD60A] animate-pulse block" />
+                          ) : (
+                            <img src={micWIcon} alt="" className={styles.imageDescribeBtnIcon} />
+                          )}
+                        </button>
+                      </div>
+                    )
                   )}
 
                   {/* 카드 하단 */}

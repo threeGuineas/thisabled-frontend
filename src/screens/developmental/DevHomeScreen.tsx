@@ -244,7 +244,17 @@ export default function DevHomeScreen({ onLoggedOut, onModeChanged }: Props) {
                 <div className={styles.rowTopRow}>
                   {media && (
                     <div className={styles.rowThumbWrapper}>
-                      <img src={resolveImageUrl(media.url)} alt="" className={styles.rowThumb} />
+                      {isVideo ? (
+                        <video
+                          src={resolveImageUrl(media.url)}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className={styles.rowThumb}
+                        />
+                      ) : (
+                        <img src={resolveImageUrl(media.url)} alt="" className={styles.rowThumb} />
+                      )}
                       {isVideo && (
                         <span className={styles.rowThumbPlayBadge}>
                           <svg viewBox="0 0 24 24" className={styles.rowThumbPlayIcon} fill="white">
