@@ -11,6 +11,7 @@ import videoYIcon from '../../assets/images/video-y.svg'
 import sendIcon from '../../assets/images/send.svg'
 import sendGIcon from '../../assets/images/send-g.svg'
 import { uploadImages, createPost } from '../../services/posts'
+import { CATEGORY_CODE } from '../../utils/category'
 import { getVideoDuration, MAX_VIDEO_BYTES, MAX_VIDEO_DURATION_SECONDS, ALLOWED_VIDEO_TYPES } from '../../utils/video'
 import { useVideoPost } from '../../hooks/useVideoPost'
 import Toast from '../../components/Toast'
@@ -147,13 +148,14 @@ export default function BlindWriteScreen({ onBack }: Props) {
   }
 
   const handleSubmit = async () => {
-    if (!content.trim() || isSubmitting) return
+    if (!content.trim() || !selected || isSubmitting) return
     setIsSubmitting(true)
     setSubmitError(null)
 
     try {
+      const categoryCode = CATEGORY_CODE[selected]
       if (videoFile) {
-        const post = await videoPost.publish(videoFile, Math.round(videoDuration), content.trim())
+        const post = await videoPost.publish(videoFile, Math.round(videoDuration), categoryCode, content.trim())
         if (!post) return
       } else {
         let mediaIds: string[] = []
@@ -161,7 +163,7 @@ export default function BlindWriteScreen({ onBack }: Props) {
           const uploaded = await uploadImages(imageFiles)
           mediaIds = uploaded.map((m) => m.media_id)
         }
-        await createPost(content.trim(), mediaIds)
+        await createPost(categoryCode, content.trim(), mediaIds)
       }
       setShowSuccessToast(true)
       setTimeout(onBack, 1500)
@@ -236,7 +238,12 @@ export default function BlindWriteScreen({ onBack }: Props) {
             </div>
           </div>
 
-          <button type="button" onClick={() => setStep(2)} className={styles.nextButton}>
+          <button
+            type="button"
+            onClick={() => selected && setStep(2)}
+            disabled={!selected}
+            className={selected ? styles.nextButton : `${styles.nextButton} opacity-40`}
+          >
             <span className={styles.nextText}>다음으로</span>
             <img src={nextIcon} alt="다음" className={styles.nextIcon} />
           </button>
@@ -377,11 +384,11 @@ export default function BlindWriteScreen({ onBack }: Props) {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!content.trim() || isSubmitting}
-              className={content.trim() && !isSubmitting ? styles.submitButtonActive : styles.submitButtonInactive}
+              disabled={!content.trim() || !selected || isSubmitting}
+              className={content.trim() && selected && !isSubmitting ? styles.submitButtonActive : styles.submitButtonInactive}
             >
-              <img src={content.trim() && !isSubmitting ? sendIcon : sendGIcon} alt="글 게시하기" className={styles.submitIcon} />
-              <span className={content.trim() && !isSubmitting ? styles.submitTextActive : styles.submitTextInactive}>
+              <img src={content.trim() && selected && !isSubmitting ? sendIcon : sendGIcon} alt="글 게시하기" className={styles.submitIcon} />
+              <span className={content.trim() && selected && !isSubmitting ? styles.submitTextActive : styles.submitTextInactive}>
                 {isSubmitting ? (videoPost.phase === 'waiting-caption' ? '자막 만드는 중...' : '게시 중...') : '글 게시하기'}
               </span>
             </button>

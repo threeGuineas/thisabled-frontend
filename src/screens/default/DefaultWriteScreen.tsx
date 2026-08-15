@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import styles from './DefaultWriteScreen.styles'
 import { uploadImages, createPost } from '../../services/posts'
-import { FILTERS } from '../../utils/category'
+import { FILTERS, CATEGORY_CODE } from '../../utils/category'
 import { getVideoDuration, MAX_VIDEO_BYTES, MAX_VIDEO_DURATION_SECONDS, ALLOWED_VIDEO_TYPES } from '../../utils/video'
 import { useVideoPost } from '../../hooks/useVideoPost'
 import Toast from '../../components/Toast'
@@ -105,13 +105,14 @@ export default function DefaultWriteScreen({ onBack }: Props) {
   }
 
   const handleSubmit = async () => {
-    if (!content.trim() || isSubmitting) return
+    if (!content.trim() || !category || isSubmitting) return
     setIsSubmitting(true)
     setSubmitError(null)
 
     try {
+      const categoryCode = CATEGORY_CODE[category]
       if (videoFile) {
-        const post = await videoPost.publish(videoFile, Math.round(videoDuration), content.trim())
+        const post = await videoPost.publish(videoFile, Math.round(videoDuration), categoryCode, content.trim())
         if (!post) return
       } else {
         let mediaIds: string[] = []
@@ -119,7 +120,7 @@ export default function DefaultWriteScreen({ onBack }: Props) {
           const uploaded = await uploadImages(imageFiles)
           mediaIds = uploaded.map((m) => m.media_id)
         }
-        await createPost(content.trim(), mediaIds)
+        await createPost(categoryCode, content.trim(), mediaIds)
       }
       setShowSuccessToast(true)
       setTimeout(onBack, 1500)
@@ -151,7 +152,7 @@ export default function DefaultWriteScreen({ onBack }: Props) {
     }
   }
 
-  const canSubmit = content.trim().length > 0 && !isSubmitting
+  const canSubmit = content.trim().length > 0 && !!category && !isSubmitting
 
   return (
     <>

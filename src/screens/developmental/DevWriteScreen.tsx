@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import styles from './DevWriteScreen.styles'
 import { uploadImages, createPost } from '../../services/posts'
+import { FILTERS, CATEGORY_CODE } from '../../utils/category'
 import { completeText } from '../../services/comm'
 import { useAiNotice } from '../../hooks/useAiNotice'
 import { useVideoPost } from '../../hooks/useVideoPost'
@@ -26,8 +27,11 @@ interface Props {
 
 // DEV-01: 한 화면에서 하나의 주요 행동만 강조 — 글쓰기(compose)와 게시 확인(confirm)을 화면으로 분리한다.
 // 사진과 동영상 중 하나만 첨부할 수 있게 해 선택지를 줄인다.
+const CATEGORIES = FILTERS.slice(1)
+
 export default function DevWriteScreen({ onBack }: Props) {
   const [step, setStep] = useState<Step>('compose')
+  const [category, setCategory] = useState<string | null>(null)
   const [content, setContent] = useState('')
   const [media, setMedia] = useState<Media | null>(null)
   const [isReadingVideo, setIsReadingVideo] = useState(false)
@@ -131,12 +135,13 @@ export default function DevWriteScreen({ onBack }: Props) {
   }
 
   const handleSubmit = async () => {
-    if (isSubmitting) return
+    if (isSubmitting || !category) return
     setIsSubmitting(true)
     setSubmitError(null)
     try {
+      const categoryCode = CATEGORY_CODE[category]
       if (media?.kind === 'video') {
-        const post = await videoPost.publish(media.file, Math.round(media.durationSeconds), content.trim())
+        const post = await videoPost.publish(media.file, Math.round(media.durationSeconds), categoryCode, content.trim())
         if (!post) return
       } else {
         let mediaIds: string[] = []
@@ -144,7 +149,7 @@ export default function DevWriteScreen({ onBack }: Props) {
           const uploaded = await uploadImages([media.file])
           mediaIds = uploaded.map((m) => m.media_id)
         }
-        await createPost(content.trim(), mediaIds)
+        await createPost(categoryCode, content.trim(), mediaIds)
       }
       setShowSuccessToast(true)
       setTimeout(onBack, 1500)
@@ -176,7 +181,7 @@ export default function DevWriteScreen({ onBack }: Props) {
     }
   }
 
-  const canGoNext = content.trim().length > 0
+  const canGoNext = content.trim().length > 0 && !!category
 
   if (step === 'confirm') {
     return (
@@ -258,7 +263,21 @@ export default function DevWriteScreen({ onBack }: Props) {
       </div>
 
       <div className={styles.body}>
-        <span className={styles.guideText}>무슨 이야기를 하고 싶으세요?</span>
+        <span className={styles.guideText}>어떤 이야기인가요?</span>
+
+        <div className={styles.categoryList}>
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory(cat)}
+              disabled={isSubmitting}
+              className={category === cat ? styles.categoryChipActive : styles.categoryChipInactive}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
 
         <textarea
           className={styles.textarea}

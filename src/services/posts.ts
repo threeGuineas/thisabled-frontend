@@ -10,6 +10,9 @@ export interface Author {
 export type AiStatus = 'none' | 'processing' | 'done' | 'failed'
 export type DescriptionStatus = AiStatus
 
+// POST-01 — 게시물 단일 카테고리 5종 (백엔드 PostCategory enum과 동일해야 함)
+export type PostCategory = 'daily' | 'info' | 'hobby' | 'concern' | 'meetup'
+
 export interface PostMediaItem {
   id: string
   media_type: string
@@ -24,6 +27,7 @@ export interface PostMediaItem {
 export interface Post {
   id: string
   author: Author
+  category: PostCategory | null
   content: string
   status: string
   media: PostMediaItem[]
@@ -92,6 +96,8 @@ const MOCK_IMAGES = [
 ]
 
 const MOCK_NICKNAMES = ['달콤한하루', '하늘산책', '달빛여행', '봄바람', '초록잎']
+
+const MOCK_CATEGORIES: PostCategory[] = ['daily', 'info', 'hobby', 'concern', 'meetup']
 
 const MOCK_VISION_DESCRIPTIONS = [
   '초록색 나뭇잎이 가득한 숲 속 풍경입니다. 맑은 햇빛이 나뭇잎 사이로 비치고 있습니다.',
@@ -218,6 +224,7 @@ const mockPosts = {
     const post: Post = {
       id: postId,
       author: { id: 'mock-uuid', nickname: '나', profile_image_url: null },
+      category: null,
       content: '',
       status: 'processing',
       media: [{
@@ -268,7 +275,7 @@ const mockPosts = {
     mockCaptionShouldFail.set(mediaItem.id, false)
     return { caption_status: 'processing' }
   },
-  async publishPost(postId: string, allowNoCaption: boolean): Promise<Post> {
+  async publishPost(postId: string, category: PostCategory, content: string, allowNoCaption: boolean): Promise<Post> {
     await sleep(400)
     const post = mockPostStore.get(postId)
     if (!post) throw { status: 404, detail: '게시물을 찾을 수 없습니다.' }
@@ -277,15 +284,16 @@ const mockPosts = {
     const captionStatus = resolved.media[0]?.caption_status ?? 'none'
     if (captionStatus === 'processing') throw { status: 409, detail: '자막을 만드는 중입니다. 잠시 후 다시 시도해 주세요.' }
     if (captionStatus === 'failed' && !allowNoCaption) throw { status: 400, detail: '자막 생성에 실패했어요. 자막 없이 게시할까요?' }
-    const updated: Post = { ...resolved, status: 'published', published_at: new Date().toISOString() }
+    const updated: Post = { ...resolved, category, content, status: 'published', published_at: new Date().toISOString() }
     mockPostStore.set(postId, updated)
     return updated
   },
-  async createPost(content: string): Promise<Post> {
+  async createPost(category: PostCategory, content: string): Promise<Post> {
     await sleep(600)
     return {
       id: crypto.randomUUID(),
       author: { id: 'mock-uuid', nickname: '나', profile_image_url: null },
+      category,
       content,
       status: 'published',
       media: [],
@@ -309,6 +317,7 @@ const mockPosts = {
           nickname: MOCK_NICKNAMES[idx % MOCK_NICKNAMES.length],
           profile_image_url: null,
         },
+        category: MOCK_CATEGORIES[idx % MOCK_CATEGORIES.length],
         content: idx === 0 ? MOCK_CAPTION_DEMO_CONTENT : MOCK_CONTENTS[idx % MOCK_CONTENTS.length],
         status: 'published',
         media: mockMedia(idx),
@@ -409,12 +418,12 @@ export async function uploadVideo(file: File, durationSeconds: number): Promise<
   return authedRequest<UploadedVideo>('/api/v1/media/videos', { method: 'POST', body: formData })
 }
 
-export async function createPost(content: string, mediaIds: string[] = []): Promise<Post> {
-  if (IS_MOCK) return mockPosts.createPost(content)
+export async function createPost(category: PostCategory, content: string, mediaIds: string[] = []): Promise<Post> {
+  if (IS_MOCK) return mockPosts.createPost(category, content)
   return authedRequest<Post>('/api/v1/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content, media_ids: mediaIds }),
+    body: JSON.stringify({ category, content, media_ids: mediaIds }),
   })
 }
 
@@ -457,12 +466,13 @@ export async function retryCaption(postId: string): Promise<{ caption_status: Ai
 
 // 영상 드래프트를 실제로 공개한다. 자막이 failed 상태면 서버가 400으로 막으며, 사용자가
 // "자막 없이 게시"를 명시적으로 선택했을 때만 allowNoCaption=true로 우회할 수 있다(CAPTION-01 정책).
-export async function publishPost(postId: string, allowNoCaption = false): Promise<Post> {
-  if (IS_MOCK) return mockPosts.publishPost(postId, allowNoCaption)
+// category·content는 업로드 시점엔 받지 않으므로 게시 확정 시점에 함께 보내야 한다.
+export async function publishPost(postId: string, category: PostCategory, content: string, allowNoCaption = false): Promise<Post> {
+  if (IS_MOCK) return mockPosts.publishPost(postId, category, content, allowNoCaption)
   return authedRequest<Post>(`/api/v1/posts/${postId}/publish`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ allow_no_caption: allowNoCaption }),
+    body: JSON.stringify({ category, content, allow_no_caption: allowNoCaption }),
   })
 }
 

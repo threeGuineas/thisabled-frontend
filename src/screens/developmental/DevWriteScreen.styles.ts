@@ -12,6 +12,10 @@ const styles = {
   body: 'flex-1 flex flex-col gap-4 px-5 pt-5 pb-28',
   guideText: [typography.lg, typography.semibold, 'text-black'].join(' '),
 
+  categoryList: 'flex flex-wrap gap-2',
+  categoryChipActive: [colors.bg.green, 'rounded-full px-4 py-2.5', typography.sm, typography.bold, 'text-white'].join(' '),
+  categoryChipInactive: [colors.bg.gray04, 'rounded-full px-4 py-2.5', typography.sm, typography.medium, 'text-black'].join(' '),
+
   textarea: [
     'w-full min-h-[200px] resize-none outline-none text-black placeholder:text-[#B3B3BD]',
     typography.lg, typography.regular, 'leading-relaxed',
