@@ -1,0 +1,62 @@
+// ThisAbled — ERD v1
+// dbdiagram.io 에서 https://dbdiagram.io/d 에 붙여넣기하면 시각화됩니다.
+
+Project ThisAbled {
+  database_type: 'PostgreSQL'
+  Note: '장애 유형별 적응형 UI 소셜 플랫폼 — S1 스키마'
+}
+
+Enum disability_type {
+  visual       [note: '시각장애']
+  developmental [note: '발달장애']
+  hearing      [note: '청각장애']
+  none
+}
+
+Enum report_status {
+  pending
+  reviewed
+  dismissed
+}
+
+Table users {
+  id            int           [pk, increment]
+  nickname      varchar(50)   [not null, unique]
+  password_hash varchar(255)  [not null]
+  disability_type disability_type [not null, default: 'none']
+  created_at    timestamptz   [not null, default: `now()`]
+
+  Note: '서비스 사용자. disability_type 에 따라 프론트 UI 모드가 결정됨'
+}
+
+Table posts {
+  id         int         [pk, increment]
+  user_id    int         [not null, ref: > users.id]
+  content    text        [not null]
+  image_url  text        [null, note: '/uploads/<uuid>.ext 또는 S3 URL']
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: '게시글. image_url 은 업로드 API 결과값'
+}
+
+Table messages {
+  id          int         [pk, increment]
+  sender_id   int         [not null, ref: > users.id]
+  receiver_id int         [not null, ref: > users.id]
+  content     text        [not null]
+  is_flagged  bool        [not null, default: false, note: 'KoBERT 그루밍 탐지 결과']
+  created_at  timestamptz [not null, default: `now()`]
+
+  Note: 'DM. is_flagged=true 시 신고 UI 표시 (발달장애 모드)'
+}
+
+Table reports {
+  id          int           [pk, increment]
+  reporter_id int           [not null, ref: > users.id]
+  target_id   int           [not null, ref: > users.id]
+  reason      text          [not null]
+  status      report_status [not null, default: 'pending']
+  created_at  timestamptz   [not null, default: `now()`]
+
+  Note: '신고. status 는 관리자가 처리 후 갱신'
+}

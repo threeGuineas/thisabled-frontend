@@ -1,1 +1,62 @@
 @import "tailwindcss";
+
+html, body, #root {
+  background-color: #fff;
+}
+
+/* 고대비 모드: 개별 컴포넌트의 색상 클래스를 일일이 덮어쓰지 않고, 화면 전체에
+   contrast/brightness 필터를 걸어 새로 추가되는 화면에도 자동으로 적용되게 한다. */
+html[data-high-contrast='true'] #root {
+  filter: contrast(1.5) brightness(1.08);
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./assets/fonts/Pretendard-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./assets/fonts/Pretendard-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./assets/fonts/Pretendard-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./assets/fonts/Pretendard-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./assets/fonts/Pretendard-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  font-family: 'Pretendard', sans-serif;
+}
+
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
