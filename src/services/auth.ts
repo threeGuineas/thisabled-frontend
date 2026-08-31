@@ -47,49 +47,6 @@ export const tokenStorage = {
   remove: (): void => { localStorage.removeItem('access_token') },
 }
 
-// ── Mock (VITE_MOCK_API=true 일 때 백엔드 없이 동작) ──────────────────────
-const _localMock = localStorage.getItem('mock_api')
-export const IS_MOCK = _localMock !== null
-  ? _localMock === 'true'
-  : import.meta.env.VITE_MOCK_API === 'true'
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
-
-const encodeMockToken = (mode: DisabilityType) => `mock::${mode}`
-
-const mockAuth = {
-  async login(nickname: string): Promise<LoginResponse> {
-    await sleep(800)
-    if (nickname.toLowerCase() === 'error')
-      throw { status: 401, detail: 'Invalid credentials' }
-    const map: Record<string, DisabilityType> = {
-      visual: 'visual', hearing: 'hearing', developmental: 'developmental', default: 'default', none: 'default',
-    }
-    const mode = map[nickname.toLowerCase()] ?? 'visual'
-    return { access_token: encodeMockToken(mode), user_id: 'mock-uuid', needs_onboarding: false, token_type: 'bearer' }
-  },
-  async register(nickname: string): Promise<SignupResponse> {
-    await sleep(800)
-    if (nickname.toLowerCase() === 'taken')
-      throw { status: 409, detail: '이미 사용 중인 닉네임입니다' }
-    return { access_token: encodeMockToken('visual'), user_id: 'mock-uuid', recovery_code: 'MOCKCODE1234', token_type: 'bearer' }
-  },
-  async checkNickname(nickname: string): Promise<NicknameCheckResponse> {
-    await sleep(300)
-    if (nickname === 'taken') return { available: false, reason: 'duplicate' }
-    if (nickname.length < 2) return { available: false, reason: 'invalid_format' }
-    return { available: true, reason: null }
-  },
-  async kakaoLogin(): Promise<KakaoCallbackResponse> {
-    await sleep(800)
-    return { is_new_user: false, access_token: encodeMockToken('visual'), user_id: 'mock-uuid' }
-  },
-  async kakaoSignup(payload: KakaoSignupPayload): Promise<KakaoSignupResponse> {
-    await sleep(800)
-    return { access_token: encodeMockToken(payload.ui_mode as DisabilityType), user_id: 'mock-uuid', stranger_requests_allowed: true }
-  },
-}
-
 // ── Base URL & shared fetch utils ─────────────────────────────────────────
 // dev: vite proxy가 /api를 백엔드로 전달하므로 상대 경로 사용. prod: 정적 빌드엔 프록시가 없으므로 백엔드 주소 직접 지정.
 const BASE_URL = import.meta.env.PROD ? (import.meta.env.VITE_BACKEND_URL as string) : ''
@@ -163,7 +120,6 @@ export async function authedRequest<T>(path: string, init: RequestInit = {}): Pr
 // ── Public API ────────────────────────────────────────────────────────────
 
 export function login(nickname: string, password: string): Promise<LoginResponse> {
-  if (IS_MOCK) return mockAuth.login(nickname)
   return request<LoginResponse>('/api/v1/auth/login', {
     method: 'POST',
     body: JSON.stringify({ nickname, password }),
@@ -171,7 +127,6 @@ export function login(nickname: string, password: string): Promise<LoginResponse
 }
 
 export function register(nickname: string, password: string): Promise<SignupResponse> {
-  if (IS_MOCK) return mockAuth.register(nickname)
   return request<SignupResponse>('/api/v1/auth/signup', {
     method: 'POST',
     body: JSON.stringify({ nickname, password }),
@@ -179,20 +134,16 @@ export function register(nickname: string, password: string): Promise<SignupResp
 }
 
 export function checkNickname(nickname: string): Promise<NicknameCheckResponse> {
-  if (IS_MOCK) return mockAuth.checkNickname(nickname)
   const params = new URLSearchParams({ nickname })
   return request<NicknameCheckResponse>(`/api/v1/auth/check-nickname?${params}`)
 }
 
 export async function logout(): Promise<void> {
   tokenStorage.remove()
-  if (!IS_MOCK) {
-    await request<{ status: string }>('/api/v1/auth/logout', { method: 'POST' }).catch(() => {})
-  }
+  await request<{ status: string }>('/api/v1/auth/logout', { method: 'POST' }).catch(() => {})
 }
 
 export async function initiateKakaoLogin(): Promise<KakaoCallbackResponse | null> {
-  if (IS_MOCK) return mockAuth.kakaoLogin()
   const { authorize_url } = await request<{ authorize_url: string }>('/api/v1/auth/kakao/authorize')
   // 백엔드 mock 모드: authorize_url에 code=mock: 포함 → fetch로 직접 처리
   // http://localhost:8000/... 형태의 절대 URL이므로 pathname만 추출해 Vite proxy 경유 (CORS 우회)
@@ -211,16 +162,8 @@ export async function initiateKakaoLogin(): Promise<KakaoCallbackResponse | null
 }
 
 export async function kakaoSignup(payload: KakaoSignupPayload): Promise<KakaoSignupResponse> {
-  if (IS_MOCK) return mockAuth.kakaoSignup(payload)
   return request<KakaoSignupResponse>('/api/v1/auth/signup', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
-}
-
-export const IS_MOCK_API = IS_MOCK
-
-export function toggleMockApi() {
-  localStorage.setItem('mock_api', IS_MOCK ? 'false' : 'true')
-  window.location.reload()
 }

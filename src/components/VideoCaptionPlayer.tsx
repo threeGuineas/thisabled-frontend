@@ -108,7 +108,7 @@ export default function VideoCaptionPlayer({ postId, media }: Props) {
     if (isGenerating) return
     setIsGenerating(true)
     try {
-      await requestCaptionGeneration(postId, media.id)
+      await requestCaptionGeneration(postId)
       setStatus('processing')
       pollUntilResolved()
     } catch {
