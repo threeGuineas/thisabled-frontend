@@ -1,6 +1,4 @@
-import { authedRequest, IS_MOCK } from './auth'
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+import { authedRequest } from './auth'
 
 // getVoices()는 비동기 로딩이므로 voiceschanged 이벤트 대기 후 한국어 음성 선택
 export function speakText(text: string, onEnd: () => void): void {
@@ -27,10 +25,6 @@ export function speakText(text: string, onEnd: () => void): void {
 }
 
 export async function transcribeAudio(blob: Blob): Promise<string> {
-  if (IS_MOCK) {
-    await sleep(1000)
-    return '음성 인식 테스트 텍스트입니다.'
-  }
   const ext = blob.type.includes('mp4') ? 'mp4' : 'webm'
   const formData = new FormData()
   formData.append('file', blob, `voice.${ext}`)

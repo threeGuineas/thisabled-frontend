@@ -1,4 +1,4 @@
-import { tokenStorage, IS_MOCK } from './auth'
+import { tokenStorage } from './auth'
 
 export type ChatSocketEvent =
   | { type: 'chat.message'; payload: { room_id: string; message_id: string } }
@@ -24,8 +24,6 @@ export function wsUrl(): string {
 
 // 액세스 토큰이 유효하지 않으면 서버가 연결을 수락한 뒤 close code 4401로 끊는다.
 export function connectChatSocket(onEvent: (event: ChatSocketEvent) => void, onAuthExpired?: () => void): ChatSocketHandle {
-  if (IS_MOCK) return { close() {} }
-
   const token = tokenStorage.get()
   const ws = new WebSocket(`${wsUrl()}/api/v1/ws?token=${encodeURIComponent(token ?? '')}`)
 

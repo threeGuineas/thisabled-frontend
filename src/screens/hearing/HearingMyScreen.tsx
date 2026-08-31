@@ -76,7 +76,7 @@ export default function HearingMyScreen({ onTabChange, onLoggedOut, onModeChange
   const [loggingOut, setLoggingOut] = useState(false)
 
   // 자막 표시 여부는 실제 동영상 자막 버튼(VideoCaptionPlayer)과 같은 로컬 저장값을 공유해야 하므로
-  // 여기서 시작값을 읽는다 — mock 서버의 mode_settings.captions는 새로고침마다 초기화돼 신뢰할 수 없다.
+  // 여기서 시작값을 읽는다.
   const [captionsEnabled, setCaptionsEnabled] = useState(() => getCaptionPreferences().enabled)
   const [vibrationEnabled, setVibrationEnabled] = useState(true)
   const [bannerEnabled, setBannerEnabled] = useState(true)
