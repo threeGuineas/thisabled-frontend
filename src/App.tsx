@@ -7,12 +7,11 @@ import BlindHomeScreen from './screens/blind/BlindHomeScreen'
 import DefaultHomeScreen from './screens/default/DefaultHomeScreen'
 import HearingHomeScreen from './screens/hearing/HearingHomeScreen'
 import DevHomeScreen from './screens/developmental/DevHomeScreen'
-import TestScreen from './screens/auth/TestScreen'
 import Toast from './components/Toast'
 import { type DisabilityType, tokenStorage } from './services/auth'
 import { setMode, getMe } from './services/users'
 
-type Screen = 'test' | 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome' | 'defaultHome' | 'hearingHome' | 'developmentalHome'
+type Screen = 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome' | 'defaultHome' | 'hearingHome' | 'developmentalHome'
 
 const homeScreenFor = (mode: DisabilityType): Screen => {
   if (mode === 'default') return 'defaultHome'
@@ -25,10 +24,8 @@ const homeScreenFor = (mode: DisabilityType): Screen => {
 // 'newSignup': 카카오 신규가입 전 모드 선택 → KakaoSignupScreen으로 전달, 가입 시 함께 제출
 type OnboardingContext = 'existingUser' | 'newSignup'
 
-const INITIAL_SCREEN: Screen = import.meta.env.DEV && import.meta.env.VITE_MOCK_API === 'true' ? 'test' : 'login'
-
 function App() {
-  const [screen, setScreen] = useState<Screen>(INITIAL_SCREEN)
+  const [screen, setScreen] = useState<Screen>('login')
   const [toastMessage, setToastMessage] = useState('')
   const [signupToken, setSignupToken] = useState('')
   const [signupUiMode, setSignupUiMode] = useState<DisabilityType>('visual')
@@ -127,25 +124,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const devTab = import.meta.env.DEV && screen !== 'test' && (
-    <button
-      type="button"
-      onClick={() => setScreen('test')}
-      className="fixed top-1/2 right-1 -translate-y-1/2 z-50 rounded-full bg-[#000000] px-2.5 py-1 text-[10px] font-bold text-white opacity-70 shadow-lg active:opacity-100"
-    >
-      DEV
-    </button>
-  )
-
   const currentScreen = (() => {
-    if (screen === 'test') return (
-      <TestScreen
-        onGoLogin={() => setScreen('login')}
-        onGoKakaoSignup={() => { setSignupToken('mock-signup-token'); setOnboardingContext('newSignup'); setScreen('onboarding') }}
-        onGoOnboarding={() => { setOnboardingContext('existingUser'); setScreen('onboarding') }}
-        onGoHome={(mode) => setScreen(homeScreenFor(mode))}
-      />
-    )
     if (screen === 'onboarding') return <OnboardingScreen onNext={handleOnboardingNext} />
     if (screen === 'kakaoSignup') return (
       <KakaoSignupScreen
@@ -173,7 +152,6 @@ function App() {
   return (
     <>
       {currentScreen}
-      {devTab}
       {toastMessage && <Toast message={toastMessage} />}
     </>
   )

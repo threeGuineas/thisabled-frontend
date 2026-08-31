@@ -34,12 +34,29 @@ ThisAbled는 **시각장애 · 청각장애 · 발달장애** 당사자와 비�
 - **적응형 UI** — 하나의 앱에서 모드별 화면 세트(`screens/blind`, `screens/hearing`, `screens/developmental`, `screens/default`)를 분리 구현
 - **소셜 피드** — 글/사진/영상 게시, 좋아요, 댓글, 관심 태그 기반 추천
 - **영상 + 자동 자막** — 업로드 영상의 자막(VTT)을 서버가 생성, `VideoCaptionPlayer`로 재생
-- **실시간 채팅 / DM** — WebSocket 기반 채팅방, 친구 요청·수락
+- **실시간 채팅 / DM** — WebSocket 기반 1:1 채팅방, 친구 요청·수락
+- **안심 채팅** — 취약 이용자를 노린 접근·유해 메시지로부터 보호하는 채팅 안전장치 (아래 참고)
 - **음성 입력** — `useVoiceInput` 훅으로 글쓰기·검색을 음성으로
 - **접근성 유틸** — 햅틱(`utils/haptics`), 대비/포커스 처리(`utils/accessibility`)
 - **알림** — 인앱 배너 + 상세 화면, 청각 모드 시각 알림
 - **카카오 소셜 로그인** 및 만 14세·약관 동의 검증 온보딩
 - **PWA** — 설치형 웹앱, 오프라인 셸
+
+### 안심 채팅
+
+시각·청각·발달장애 당사자가 낯선 사람과의 대화에서 겪을 수 있는 위험(원치 않는 접근, 유해·유도성 메시지)을 줄이기 위한 채팅 보호 기능입니다. 서버(SAFE-01~05)와 연동해 프론트 4개 모드 채팅 화면에서 일관되게 노출됩니다.
+
+| 보호 장치 | 동작 | 관련 화면·서비스 |
+| --- | --- | --- |
+| **요청 승인제** | 친구가 아닌 상대의 대화는 `request` 방으로 생성되고, 수락 전에는 **1건만** 전송 가능. 수신자가 수락해야 `active` 전환 | `ChatScreen`(요청함), `acceptChatRequest` |
+| **낯선 사람 요청 차단** | 마이페이지 "낯선 사람 메시지 요청 허용" 토글을 끄면 모르는 사람의 채팅 요청 자체를 차단 | `MyScreen`, `updateSettings({ stranger_requests_allowed })` |
+| **미성년자 보호** | 미성년–성인 간 사진·영상 전송 차단(서버 403) | `ChatRoomScreen`, `sendChatMedia` |
+| **AI 유해성 검사 · 메시지 가림** | 전송 시 서버가 동기 분석 → 주의(`flagged`) 판정 메시지는 수신자에게 **블러 처리**(`content:null, blurred:true`)되고, "내용 보기"를 눌러야 원문 확인. 발신자에겐 판정 비노출 | `ChatRoomScreen`, `revealChatMessage` |
+| **전송 제한(SAFE-05)** | 주의 판정이 반복된 발신자는 해당 상대에게 전송 제한("전송 제한됨" 배지). 수신자가 직접 해제 가능 | `ChatScreen`, `releaseChatRestriction` |
+| **차단** | 사용자 차단 시 대화·요청 불가 | `FriendScreen`, `blockUser` / `getBlocks` |
+| **소급 블러** | SAFE 장애 시 비친구 메시지는 `pending` 보류, 복구 후 재분석해 위험 메시지를 뒤늦게라도 가림 | WebSocket `chat.message` 재수신 |
+
+> 관련 알림: `chat.request`(요청 도착), `chat.flagged`(주의 메시지), `chat.restricted`(전송 제한). 청각 모드에서는 시각 알림으로 함께 표시됩니다.
 
 ---
 
@@ -67,12 +84,10 @@ ThisAbled는 **시각장애 · 청각장애 · 발달장애** 당사자와 비�
 | `WriteScreen` | 글/사진/영상 작성 |
 | `PostDetailScreen` | 게시글 상세 |
 | `CommentsScreen` | 댓글 |
-| `ChatScreen` | 채팅 목록 |
-| `ChatRoomScreen` | 1:1 채팅방 |
-| `FriendScreen` | 친구 목록·요청 |
-| `MyScreen` | 마이페이지 · 모드 전환 · 로그아웃 |
-
-> 개발 모드에서는 우측 `DEV` 버튼으로 `TestScreen`에 진입해 각 화면으로 바로 이동할 수 있습니다.
+| `ChatScreen` | 채팅 목록 · 요청함 · 전송 제한 관리 |
+| `ChatRoomScreen` | 1:1 채팅방 · 유해 메시지 가림/열람 |
+| `FriendScreen` | 친구 목록·요청 · 차단 관리 |
+| `MyScreen` | 마이페이지 · 모드 전환 · 낯선 사람 요청 허용 · 로그아웃 |
 
 ---
 
@@ -105,11 +120,9 @@ cp .env.example .env.development
 | 변수 | 설명 | 예시 |
 | --- | --- | --- |
 | `VITE_BACKEND_URL` | 백엔드 API 주소. dev는 Vite proxy(`/api`, `/uploads`)의 target, prod는 fetch base URL | `https://api.example.com` |
-| `VITE_MOCK_API` | `true`면 백엔드 없이 목(mock) 데이터로 동작 | `false` |
 
 - **dev**: `/api` 요청은 Vite dev server가 `VITE_BACKEND_URL`로 프록시 (CORS 우회, WebSocket 포함)
 - **prod**: 정적 빌드에는 프록시가 없으므로 `VITE_BACKEND_URL`을 직접 호출
-- 목 모드는 브라우저 콘솔에서 `localStorage.setItem('mock_api','true')` 로도 토글 가능
 
 ---
 
@@ -164,7 +177,7 @@ src/
 | Build Command | `npm run build` |
 | Output Directory | `dist` |
 | Install Command | `npm install` |
-| 환경 변수 | `VITE_BACKEND_URL`, `VITE_MOCK_API` (Production/Preview 각각 설정) |
+| 환경 변수 | `VITE_BACKEND_URL` (Production/Preview 각각 설정) |
 
 배포 절차:
 
