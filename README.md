@@ -1,10 +1,8 @@
 <div align="center">
 
-<img src="src/assets/images/logo.svg" width="160" alt="ThisAbled logo" />
+<img src="src/assets/images/logo.svg" width="320" alt="ThisAbled logo" />
 
-# ThisAbled — Frontend
-
-**장애 유형별로 UI가 달라지는 적응형(adaptive) 소셜 커뮤니티 플랫폼**
+**장애인 맞춤형 AI 소셜 커뮤니티 플랫폼**
 
 <p>
   <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" />
