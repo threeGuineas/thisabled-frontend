@@ -1,5 +1,4 @@
 import typography from '../../styles/typography'
-import colors from '../../styles/colors'
 
 const styles = {
   container: [
@@ -11,19 +10,12 @@ const styles = {
     'mt-[30vh] flex flex-col items-center',
   ].join(' '),
 
-  title: [
-    typography['4xl'], typography.semibold,
-    'tracking-tight text-black-400',
-  ].join(' '),
-
-  subtitle: [
-    'mt-1',
-    typography.sm, typography.medium,
-    colors.text.gray01,
+  logo: [
+    'h-[70px] w-auto',
   ].join(' '),
 
   buttonSection: [
-    'mt-16 flex flex-col gap-3',
+    'mt-8 flex flex-col gap-3',
   ].join(' '),
 
   kakaoButton: [

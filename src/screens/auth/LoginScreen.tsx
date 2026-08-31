@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import styles from './LoginScreen.styles'
 import { initiateKakaoLogin, tokenStorage } from '../../services/auth'
+import logo from '../../assets/images/logo.svg'
 
 interface Props {
   onLogin: () => void
@@ -45,8 +46,7 @@ export default function LoginScreen({ onLogin, onKakaoNewUser, initialError }: P
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>ThisAbled</h1>
-        <p className={styles.subtitle}>장애인 맞춤형 AI 소셜 커뮤니티</p>
+        <img src={logo} alt="ThisAbled" className={styles.logo} />
       </div>
 
       <div className={styles.buttonSection}>
