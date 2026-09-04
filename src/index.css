@@ -1,7 +1,25 @@
 @import "tailwindcss";
 
-html, body, #root {
+html, body {
+  background-color: #e5e7eb;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+}
+
+/* 데스크탑에서도 모바일 폭으로 고정. transform은 시각적 효과 없이 #root를
+   position:fixed 자식(BottomNav, 모달, Toast 등)의 containing block으로 만들어
+   그 요소들이 프레임 밖(브라우저 전체 폭)으로 새지 않고 프레임 안에 붙게 한다. */
+#root {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
   background-color: #fff;
+  position: relative;
+  transform: translateZ(0);
 }
 
 /* 고대비 모드: 개별 컴포넌트의 색상 클래스를 일일이 덮어쓰지 않고, 화면 전체에
