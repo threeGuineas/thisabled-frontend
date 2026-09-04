@@ -3,7 +3,7 @@ import colors from '../../styles/colors'
 
 const styles = {
   // 목록형 메인 화면 — 옅은 회색 캔버스 위에 흰 카드를 얹어 입체감을 준다
-  container: 'min-h-screen bg-[#F7F7F9] flex flex-col pb-24',
+  container: 'min-h-screen bg-[#F7F7F9] flex flex-col',
   // 편집/상세 화면 — 단일 목적 폼이라 카드 구분 없이 흰 배경 그대로 사용
   subContainer: 'min-h-screen bg-white flex flex-col pb-10',
 

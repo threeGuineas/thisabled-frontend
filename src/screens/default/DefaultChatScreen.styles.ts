@@ -7,7 +7,7 @@ export default function getStyles(theme: ChatScreenTheme = 'default') {
   const accentBg = theme === 'hearing' ? colors.bg.blue : colors.bg.yellow
 
   return {
-    container: 'min-h-screen bg-[#F7F7F9] flex flex-col pb-24',
+    container: 'min-h-screen bg-[#F7F7F9] flex flex-col',
 
     header: 'flex items-center justify-between px-5 pt-6 pb-3',
     headerTitle: [typography['2xl'], typography.bold, 'text-black'].join(' '),

@@ -4,7 +4,7 @@ import colors from '../../styles/colors'
 // DEV-01: 한 화면의 정보와 선택지를 줄이고, 큰 버튼·쉬운 문장·일관된 아이콘을 쓴다.
 // 검색창처럼 텍스트 입력이 필요한 요소는 빼고, 카테고리는 한 줄의 큰 알약 버튼으로만 고른다.
 const styles = {
-  container: 'min-h-screen bg-[#F4FBF7] flex flex-col pb-28',
+  container: 'min-h-screen bg-[#F4FBF7] flex flex-col',
 
   header: 'px-6 pt-8 pb-1',
   headerTitle: [typography['3xl'], typography.extrabold, 'text-black'].join(' '),
