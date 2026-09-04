@@ -2,7 +2,7 @@ import typography from '../../styles/typography'
 import colors from '../../styles/colors'
 
 const styles = {
-  container: 'min-h-screen bg-[#F5F8FF] flex flex-col pb-24',
+  container: 'min-h-screen bg-[#F5F8FF] flex flex-col',
 
   searchWrapper: 'px-5 pt-6 pb-3',
   searchBox: [

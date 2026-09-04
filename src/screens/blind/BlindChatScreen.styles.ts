@@ -1,7 +1,7 @@
 import typography from '../../styles/typography'
 
 const styles = {
-  container: 'min-h-screen bg-black flex flex-col pb-24',
+  container: 'min-h-screen bg-black flex flex-col',
 
   header: 'flex items-center justify-between px-6 pt-7 pb-4',
   headerLeft: 'flex items-center gap-2',
