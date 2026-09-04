@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import styles from './DefaultMyScreen.styles'
 import BottomNav, { type Tab } from '../../components/BottomNav'
+import BottomSheet from '../../components/BottomSheet'
 import modeIcon from '../../assets/images/mode.svg'
 import checkYIcon from '../../assets/images/check-y.svg'
 import friendIcon from '../../assets/images/friend.svg'
@@ -283,13 +284,8 @@ export default function DefaultMyScreen({ onTabChange, onLoggedOut, onModeChange
         <span className={styles.withdrawLinkText}>회원 탈퇴</span>
       </button>
 
-      {/* 오버레이 */}
-      {pendingMode && (
-        <div className={styles.overlay} onClick={handleModeCancel} />
-      )}
-
       {/* 모드 전환 바텀시트 */}
-      {pendingMode && <div className={`${styles.bottomSheet} ${styles.bottomSheetOpen}`}>
+      <BottomSheet open={pendingMode !== null} onClose={handleModeCancel} className={styles.bottomSheet}>
         <div className={styles.sheetHandle} />
         <span className={styles.sheetTitle}>화면 모드 전환</span>
         <div className={styles.sheetTextGroup}>
@@ -306,7 +302,7 @@ export default function DefaultMyScreen({ onTabChange, onLoggedOut, onModeChange
         <button type="button" disabled={modeSaving} onClick={handleModeCancel} className={styles.sheetCancelButton}>
           <span className={styles.sheetCancelText}>취소</span>
         </button>
-      </div>}
+      </BottomSheet>
 
       <BottomNav variant="default" active={activeTab} onChange={handleTabChange} />
     </div>

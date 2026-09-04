@@ -68,16 +68,7 @@ const styles = {
   ].join(' '),
   logoutText: ['text-white', typography.sm, typography.semibold].join(' '),
 
-  overlay: 'fixed inset-0 bg-black/60 z-40',
-
-  bottomSheet: [
-    'fixed bottom-0 left-0 right-0 z-50',
-    'bg-[#1A1A1A] rounded-t-3xl px-6 pt-6 pb-10',
-    'flex flex-col items-center gap-4',
-    'transition-transform duration-300',
-  ].join(' '),
-  bottomSheetOpen: 'translate-y-0',
-  bottomSheetClosed: 'translate-y-full',
+  bottomSheet: 'bg-[#1A1A1A] rounded-t-3xl px-6 pt-6 pb-10 flex flex-col items-center gap-4',
 
   sheetHandle: 'w-10 h-1 rounded-full bg-white/20 mb-1',
 

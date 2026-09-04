@@ -138,9 +138,7 @@ const styles = {
     typography.base, typography.bold,
   ].join(' '),
 
-  overlay: 'fixed inset-0 bg-black/40 z-40',
-  bottomSheet: 'fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl transition-transform',
-  bottomSheetOpen: 'translate-y-0',
+  bottomSheet: 'bg-white rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl',
   sheetHandle: 'w-10 h-1.5 rounded-full bg-[#EBEBEF] mx-auto mb-5',
   sheetTitle: [typography.sm, typography.bold, colors.text.green, 'block text-center mb-2'].join(' '),
   sheetTextGroup: 'flex flex-col items-center gap-1 mb-6',

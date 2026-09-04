@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import styles from './DevMyScreen.styles'
 import BottomNav, { type Tab } from '../../components/BottomNav'
+import BottomSheet from '../../components/BottomSheet'
 import modeIcon from '../../assets/images/mode.svg'
 import checkGreenIcon from '../../assets/images/check-green.svg'
 import friendIcon from '../../assets/images/friend.svg'
@@ -250,27 +251,23 @@ export default function DevMyScreen({ onTabChange, onLoggedOut, onModeChanged }:
         <span className={styles.withdrawLinkText}>회원 그만두기</span>
       </button>
 
-      {pendingMode && <div className={styles.overlay} onClick={handleModeCancel} />}
-
-      {pendingMode && (
-        <div className={`${styles.bottomSheet} ${styles.bottomSheetOpen}`}>
-          <div className={styles.sheetHandle} />
-          <span className={styles.sheetTitle}>화면 바꾸기</span>
-          <div className={styles.sheetTextGroup}>
-            <p className={styles.sheetQuestion}>
-              <span className={styles.sheetQuestionHighlight}>{pendingModeTitle} </span>화면으로 바꿀까요?
-            </p>
-            <span className={styles.sheetDesc}>앱 전체 화면이 새 모습으로 바뀌어요.</span>
-          </div>
-          {modeError && <p className={styles.errorText}>{modeError}</p>}
-          <button type="button" disabled={modeSaving} onClick={handleModeConfirm} className={styles.sheetConfirmButton}>
-            <span className={styles.sheetConfirmText}>{modeSaving ? '바꾸는 중...' : '바꾸기'}</span>
-          </button>
-          <button type="button" disabled={modeSaving} onClick={handleModeCancel} className={styles.sheetCancelButton}>
-            <span className={styles.sheetCancelText}>취소</span>
-          </button>
+      <BottomSheet open={pendingMode !== null} onClose={handleModeCancel} className={styles.bottomSheet}>
+        <div className={styles.sheetHandle} />
+        <span className={styles.sheetTitle}>화면 바꾸기</span>
+        <div className={styles.sheetTextGroup}>
+          <p className={styles.sheetQuestion}>
+            <span className={styles.sheetQuestionHighlight}>{pendingModeTitle} </span>화면으로 바꿀까요?
+          </p>
+          <span className={styles.sheetDesc}>앱 전체 화면이 새 모습으로 바뀌어요.</span>
         </div>
-      )}
+        {modeError && <p className={styles.errorText}>{modeError}</p>}
+        <button type="button" disabled={modeSaving} onClick={handleModeConfirm} className={styles.sheetConfirmButton}>
+          <span className={styles.sheetConfirmText}>{modeSaving ? '바꾸는 중...' : '바꾸기'}</span>
+        </button>
+        <button type="button" disabled={modeSaving} onClick={handleModeCancel} className={styles.sheetCancelButton}>
+          <span className={styles.sheetCancelText}>취소</span>
+        </button>
+      </BottomSheet>
 
       <BottomNav variant="developmental" active={activeTab} onChange={handleTabChange} />
     </div>

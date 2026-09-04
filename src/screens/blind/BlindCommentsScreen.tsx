@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './BlindCommentsScreen.styles'
+import BottomSheet from '../../components/BottomSheet'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
 import {
   getComments,
@@ -284,13 +285,8 @@ export default function BlindCommentsScreen({ postId, authorNickname, onBack, on
         <span className={styles.addCommentText}>댓글 달기</span>
       </button>
 
-      {/* 오버레이 */}
-      {showSheet && (
-        <div className={styles.overlay} onClick={handleCloseSheet} />
-      )}
-
       {/* 바텀시트 */}
-      <div className={`${styles.bottomSheet} ${showSheet ? styles.bottomSheetOpen : styles.bottomSheetClosed}`}>
+      <BottomSheet open={showSheet} onClose={handleCloseSheet} className={styles.bottomSheet} overlayClassName="bg-black/60">
         <div className={styles.sheetHeader}>
           <span className={styles.sheetTitle}>{editingComment ? '댓글 수정' : '댓글 달기'}</span>
           <button type="button" onClick={handleCloseSheet} className={styles.sheetCancelButton}>
@@ -340,7 +336,7 @@ export default function BlindCommentsScreen({ postId, authorNickname, onBack, on
             </span>
           </button>
         </div>
-      </div>
+      </BottomSheet>
 
       {profileModal}
     </div>

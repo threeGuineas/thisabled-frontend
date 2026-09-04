@@ -72,16 +72,7 @@ const styles = {
   ].join(' '),
   logoutText: ['text-black', typography.sm, typography.semibold].join(' '),
 
-  overlay: 'fixed inset-0 bg-black/40 z-40',
-
-  bottomSheet: [
-    'fixed bottom-0 left-0 right-0 z-50',
-    'bg-white rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl',
-    'flex flex-col items-center gap-4',
-    'transition-transform duration-300',
-  ].join(' '),
-  bottomSheetOpen: 'translate-y-0',
-  bottomSheetClosed: 'translate-y-full',
+  bottomSheet: ['bg-white rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl flex flex-col items-center gap-4'].join(' '),
 
   sheetHandle: ['w-10 h-1 rounded-full mb-1', colors.bg.gray03].join(' '),
 
