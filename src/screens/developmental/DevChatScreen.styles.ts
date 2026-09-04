@@ -3,7 +3,7 @@ import colors from '../../styles/colors'
 
 // 발달장애 모드 전용 채팅 목록 스타일 — DevHomeScreen/DevMyScreen과 같은 톤(민트 배경, 흰 카드, 큰 글자)
 const styles = {
-  container: 'min-h-screen bg-[#F4FBF7] flex flex-col pb-28',
+  container: 'min-h-screen bg-[#F4FBF7] flex flex-col',
 
   header: 'px-6 pt-8 pb-4',
   headerTitle: [typography['3xl'], typography.extrabold, 'text-black'].join(' '),

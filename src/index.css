@@ -5,18 +5,28 @@ html, body {
 }
 
 body {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   justify-content: center;
 }
 
 /* 데스크탑에서도 모바일 폭으로 고정. transform은 시각적 효과 없이 #root를
    position:fixed 자식(BottomNav, 모달, Toast 등)의 containing block으로 만들어
-   그 요소들이 프레임 밖(브라우저 전체 폭)으로 새지 않고 프레임 안에 붙게 한다. */
+   그 요소들이 프레임 밖(브라우저 전체 폭)으로 새지 않고 프레임 안에 붙게 한다.
+
+   단, #root 자신이 스크롤되면(overflow-y:auto) 그 안의 fixed 자식도 함께 밀려
+   올라간다 — fixed의 containing block인 #root가 곧 스크롤 컨테이너면, 그 스크롤
+   오프셋만큼 fixed 자식도 같이 움직이기 때문(absolute와 동일한 동작). 그래서
+   #root 자신은 높이를 고정하고 넘치는 내용은 숨기기만 하고(overflow:hidden),
+   실제 스크롤은 안쪽 래퍼(App.tsx의 스크롤 wrapper)가 담당하게 분리한다.
+   그러면 fixed 자식(BottomNav 등)의 containing block(#root)은 스크롤되지 않으므로
+   안쪽 콘텐츠를 아무리 스크롤해도 화면 하단에 그대로 붙어 있는다. */
 #root {
   width: 100%;
   max-width: 480px;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   background-color: #fff;
   position: relative;
   transform: translateZ(0);

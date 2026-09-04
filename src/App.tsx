@@ -151,7 +151,12 @@ function App() {
 
   return (
     <>
-      {currentScreen}
+      {/* #root는 화면 프레임(fixed 자식들의 containing block)으로 고정되어 있어야 하므로
+          실제 스크롤은 이 래퍼가 담당한다 — 그래야 BottomNav 등 fixed 요소가
+          스크롤 중에도 화면 하단에 계속 붙어 있는다(src/index.css의 #root 주석 참고). */}
+      <div className="h-full overflow-y-auto">
+        {currentScreen}
+      </div>
       {toastMessage && <Toast message={toastMessage} />}
     </>
   )

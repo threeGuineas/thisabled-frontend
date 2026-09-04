@@ -94,14 +94,7 @@ const styles = {
   voiceText: ['text-white', typography.base, typography.medium].join(' '),
 
   // 채팅 입력 바텀시트
-  overlay: 'fixed inset-0 bg-black/60 z-40',
-  chatSheet: [
-    'fixed bottom-0 left-0 right-0 z-50',
-    'bg-[#1A1A1A] rounded-t-3xl px-6 pt-5 pb-8',
-    'transition-transform duration-300',
-  ].join(' '),
-  chatSheetOpen: 'translate-y-0',
-  chatSheetClosed: 'translate-y-full',
+  chatSheet: 'bg-[#1A1A1A] rounded-t-3xl px-6 pt-5 pb-8',
 
   sheetHeader: 'flex items-center justify-between mb-4',
   sheetTitle: ['text-white', typography.base, typography.bold].join(' '),

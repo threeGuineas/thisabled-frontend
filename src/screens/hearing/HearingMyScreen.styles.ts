@@ -3,7 +3,7 @@ import colors from '../../styles/colors'
 
 const styles = {
   // 목록형 메인 화면 — 옅은 회색 캔버스 위에 흰 카드를 얹어 입체감을 준다
-  container: 'min-h-screen bg-[#F7F7F9] flex flex-col pb-24',
+  container: 'min-h-screen bg-[#F7F7F9] flex flex-col',
   // 편집/상세 화면 — 단일 목적 폼이라 카드 구분 없이 흰 배경 그대로 사용
   subContainer: 'min-h-screen bg-white flex flex-col pb-10',
 
@@ -118,16 +118,7 @@ const styles = {
   ].join(' '),
   logoutText: ['text-black', typography.sm, typography.semibold].join(' '),
 
-  overlay: 'fixed inset-0 bg-black/40 z-40',
-
-  bottomSheet: [
-    'fixed bottom-0 left-0 right-0 z-50',
-    'bg-white rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl',
-    'flex flex-col items-center gap-4',
-    'transition-transform duration-300',
-  ].join(' '),
-  bottomSheetOpen: 'translate-y-0',
-  bottomSheetClosed: 'translate-y-full',
+  bottomSheet: ['bg-white rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl flex flex-col items-center gap-4'].join(' '),
 
   sheetHandle: ['w-10 h-1 rounded-full mb-1', colors.bg.gray03].join(' '),
 

@@ -8,11 +8,18 @@ const shared = {
   iconDim: 'w-6 h-6 opacity-40',
 }
 
+// nav는 각 화면의 (flex-col) container 안 마지막 자식으로 렌더된다.
+// fixed 대신 sticky+mt-auto를 쓰는 이유: fixed는 transform으로 만든 #root의
+// containing block에 의존하는데, 실기기 브라우저에서 스크롤 중 이 관계가 깨지는
+// 경우가 있다(특히 iOS Safari). sticky는 그런 트릭 없이 스크롤 컨테이너를 그대로
+// 따라가므로 더 확실하고, mt-auto는 콘텐츠가 화면보다 짧을 때도 nav를 화면 맨
+// 아래로 밀어준다. (container의 pb-* 패딩은 이제 필요 없다 — nav가 실제 공간을
+// 차지하므로 콘텐츠와 겹치지 않는다.)
 const styles = {
   default: {
     ...shared,
     nav: [
-      'fixed bottom-0 left-0 right-0',
+      'sticky bottom-0 mt-auto',
       'h-20 bg-white',
       'border-t', colors.border.gray03,
       'flex items-center',
@@ -24,7 +31,7 @@ const styles = {
   blind: {
     ...shared,
     nav: [
-      'fixed bottom-0 left-0 right-0',
+      'sticky bottom-0 mt-auto',
       'h-20 bg-black',
       'border-t-2 border-[#FFD60A]',
       'flex items-center',
@@ -36,7 +43,7 @@ const styles = {
   hearing: {
     ...shared,
     nav: [
-      'fixed bottom-0 left-0 right-0',
+      'sticky bottom-0 mt-auto',
       'h-20', colors.bg.blue01,
       'border-t', colors.border.gray03,
       'flex items-center',
@@ -52,7 +59,7 @@ const styles = {
     icon: 'w-8 h-8',
     iconDim: 'w-8 h-8 opacity-40',
     nav: [
-      'fixed bottom-0 left-0 right-0',
+      'sticky bottom-0 mt-auto',
       'h-24', colors.bg.green01,
       'border-t-2', colors.border.green,
       'flex items-center',

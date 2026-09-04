@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './BlindChatRoomScreen.styles'
+import BottomSheet from '../../components/BottomSheet'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
 import {
   getChatMessages,
@@ -543,11 +544,7 @@ export default function BlindChatRoomScreen({ room, onBack }: Props) {
         </div>
       )}
 
-      {showChatSheet && (
-        <div className={styles.overlay} onClick={handleCloseSheet} />
-      )}
-
-      <div className={`${styles.chatSheet} ${showChatSheet ? styles.chatSheetOpen : styles.chatSheetClosed}`}>
+      <BottomSheet open={showChatSheet} onClose={handleCloseSheet} className={styles.chatSheet} overlayClassName="bg-black/60">
         <div className={styles.sheetHeader}>
           <span className={styles.sheetTitle}>채팅하기</span>
           <button type="button" onClick={handleCloseSheet} className={styles.sheetCancelButton}>
@@ -596,7 +593,7 @@ export default function BlindChatRoomScreen({ room, onBack }: Props) {
             </span>
           </button>
         </div>
-      </div>
+      </BottomSheet>
     </div>
   )
 }
