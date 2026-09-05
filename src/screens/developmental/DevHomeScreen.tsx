@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './DevHomeScreen.styles'
-import BottomNav, { type Tab } from '../../components/BottomNav'
+import BottomNav from '../../components/BottomNav'
 import DevPostDetailScreen from './DevPostDetailScreen'
 import DevWriteScreen from './DevWriteScreen'
 import DevMyScreen from './DevMyScreen'
 import DevChatScreen from './DevChatScreen'
 import DevFriendScreen from './DevFriendScreen'
 import { useProfileModal } from '../../hooks/useProfileModal'
+import { usePersistedTab } from '../../hooks/usePersistedTab'
 import type { ProfileModalUser } from '../../components/BlindUserProfileModal'
 import { getFeed, likePost, unlikePost, type Post, type Author } from '../../services/posts'
 import { getMe, type MeProfile } from '../../services/users'
@@ -36,7 +37,7 @@ interface Props {
 
 // DEV-01: 검색창·카테고리 필터 없이 "글쓰기" 하나만 강조하는 발달장애 모드 홈 화면.
 export default function DevHomeScreen({ onLoggedOut, onModeChanged }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('home')
+  const [activeTab, setActiveTab] = usePersistedTab()
   const [activeFilter, setActiveFilter] = useState('전체')
   const [activePostId, setActivePostId] = useState<string | null>(null)
   const [showWrite, setShowWrite] = useState(false)

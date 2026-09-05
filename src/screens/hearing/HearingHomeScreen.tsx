@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './HearingHomeScreen.styles'
-import BottomNav, { type Tab } from '../../components/BottomNav'
+import BottomNav from '../../components/BottomNav'
 import NotificationBanner from '../../components/NotificationBanner'
 import NotificationDetailScreen from '../auth/NotificationDetailScreen'
 import HearingPostDetailScreen from './HearingPostDetailScreen'
@@ -9,6 +9,7 @@ import HearingMyScreen from './HearingMyScreen'
 import DefaultChatScreen from '../default/DefaultChatScreen'
 import DefaultFriendScreen from '../default/DefaultFriendScreen'
 import { useProfileModal } from '../../hooks/useProfileModal'
+import { usePersistedTab } from '../../hooks/usePersistedTab'
 import type { ProfileModalUser } from '../../components/BlindUserProfileModal'
 import { getFeed, likePost, unlikePost, type Post, type Author } from '../../services/posts'
 import { getMe, type MeProfile } from '../../services/users'
@@ -39,7 +40,7 @@ interface Props {
 }
 
 export default function HearingHomeScreen({ onLoggedOut, onModeChanged }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('home')
+  const [activeTab, setActiveTab] = usePersistedTab()
   const [activeFilter, setActiveFilter] = useState('전체')
   const [searchQuery, setSearchQuery] = useState('')
   const [activePostId, setActivePostId] = useState<string | null>(null)
