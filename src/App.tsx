@@ -10,6 +10,7 @@ import DevHomeScreen from './screens/developmental/DevHomeScreen'
 import Toast from './components/Toast'
 import { type DisabilityType, tokenStorage } from './services/auth'
 import { setMode, getMe } from './services/users'
+import { clearPersistedTab } from './hooks/usePersistedTab'
 
 type Screen = 'login' | 'onboarding' | 'kakaoSignup' | 'interestTags' | 'blindHome' | 'defaultHome' | 'hearingHome' | 'developmentalHome'
 
@@ -26,6 +27,7 @@ type OnboardingContext = 'existingUser' | 'newSignup'
 
 function App() {
   const [screen, setScreen] = useState<Screen>('login')
+  const [isInitializing, setIsInitializing] = useState(true)
   const [toastMessage, setToastMessage] = useState('')
   const [signupToken, setSignupToken] = useState('')
   const [signupUiMode, setSignupUiMode] = useState<DisabilityType>('visual')
@@ -92,18 +94,37 @@ function App() {
     showToast('회원가입이 완료되었습니다.', () => setScreen(homeScreenFor(signupUiMode)))
   }
 
-  // 카카오 콜백: 백엔드가 {FRONTEND_URL}?is_new_user=...&signup_token=... 로 리다이렉트한 경우 처리
+  const handleLoggedOut = () => {
+    clearPersistedTab()
+    setScreen('login')
+  }
+
+  // 카카오 콜백: 백엔드가 {FRONTEND_URL}?is_new_user=...&signup_token=... 로 리다이렉트한 경우 처리.
+  // 콜백 파라미터가 없는 일반 새로고침이라면 저장된 토큰으로 로그인 상태와 화면을 복원한다.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const isNewUser = params.get('is_new_user')
     const error = params.get('error')
-    if (isNewUser === null && error === null) return
+
+    if (isNewUser === null && error === null) {
+      const token = tokenStorage.get()
+      if (token === null) {
+        setIsInitializing(false)
+        return
+      }
+      getMe()
+        .then((me) => setScreen(homeScreenFor(me.ui_mode)))
+        .catch(() => tokenStorage.remove())
+        .finally(() => setIsInitializing(false))
+      return
+    }
 
     // 처리 후 URL 파라미터 정리
     window.history.replaceState({}, '', window.location.pathname)
 
     if (error !== null) {
       setLoginError('카카오 로그인에 실패했어요. 다시 시도해주세요.')
+      setIsInitializing(false)
       return
     }
 
@@ -114,17 +135,25 @@ function App() {
         setOnboardingContext('newSignup')
         setScreen('onboarding')
       }
+      setIsInitializing(false)
     } else if (isNewUser === 'false') {
       const token = params.get('access_token')
       if (token) {
         tokenStorage.set(token)
-        routeToHomeAfterLogin()
+        routeToHomeAfterLogin().finally(() => setIsInitializing(false))
+      } else {
+        setIsInitializing(false)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const currentScreen = (() => {
+    if (isInitializing) return (
+      <div className="flex h-full w-full items-center justify-center">
+        <span className="w-6 h-6 rounded-full border-2 border-black border-t-transparent animate-spin block" />
+      </div>
+    )
     if (screen === 'onboarding') return <OnboardingScreen onNext={handleOnboardingNext} />
     if (screen === 'kakaoSignup') return (
       <KakaoSignupScreen
@@ -136,10 +165,10 @@ function App() {
       />
     )
     if (screen === 'interestTags') return <InterestTagsScreen onDone={handleInterestTagsDone} />
-    if (screen === 'blindHome') return <BlindHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
-    if (screen === 'defaultHome') return <DefaultHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
-    if (screen === 'hearingHome') return <HearingHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
-    if (screen === 'developmentalHome') return <DevHomeScreen onLoggedOut={() => setScreen('login')} onModeChanged={handleModeChanged} />
+    if (screen === 'blindHome') return <BlindHomeScreen onLoggedOut={handleLoggedOut} onModeChanged={handleModeChanged} />
+    if (screen === 'defaultHome') return <DefaultHomeScreen onLoggedOut={handleLoggedOut} onModeChanged={handleModeChanged} />
+    if (screen === 'hearingHome') return <HearingHomeScreen onLoggedOut={handleLoggedOut} onModeChanged={handleModeChanged} />
+    if (screen === 'developmentalHome') return <DevHomeScreen onLoggedOut={handleLoggedOut} onModeChanged={handleModeChanged} />
     return (
       <LoginScreen
         onLogin={handleLoginSuccess}
