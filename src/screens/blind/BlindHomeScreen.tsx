@@ -206,7 +206,7 @@ export default function BlindHomeScreen({ onLoggedOut, onModeChanged }: Props) {
       <BlindFriendScreen
         onTabChange={setActiveTab}
         onOpenChat={(friend: Author) =>
-          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url, String(friend.id ?? friend.nickname)))
+          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url))
         }
       />
     )
@@ -315,7 +315,7 @@ export default function BlindHomeScreen({ onLoggedOut, onModeChanged }: Props) {
               const isMyPost = !!(me && authorId && String(authorId) === String(me.id))
               const nickname = isMyPost ? me!.nickname : post.author.nickname
               const image = post.media[0]
-              const avatarUrl = avatarUrlFor(post.author.profile_image_url, String(authorId ?? post.id))
+              const avatarUrl = avatarUrlFor(post.author.profile_image_url)
               const handleOpenProfile = () => {
                 if (isMyPost) return
                 openProfile({ id: authorId, nickname, bio: undefined, avatarUrl })

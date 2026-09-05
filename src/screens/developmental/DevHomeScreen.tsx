@@ -138,7 +138,7 @@ export default function DevHomeScreen({ onLoggedOut, onModeChanged }: Props) {
       <DevFriendScreen
         onTabChange={setActiveTab}
         onOpenChat={(friend: Author) =>
-          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url, String(friend.id ?? friend.nickname)))
+          openChatWith(friend.id, friend.nickname, avatarUrlFor(friend.profile_image_url))
         }
       />
     )
