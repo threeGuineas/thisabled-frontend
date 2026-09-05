@@ -272,7 +272,7 @@ export default function DefaultChatScreen({ onTabChange, targetUser, onTargetUse
           <div className={styles.requestList}>
             {requests.map((room) => {
               const nickname = room.counterpart.nickname
-              const avatarUrl = avatarUrlFor(room.counterpart.profile_image_url, String(room.counterpart.id ?? nickname))
+              const avatarUrl = avatarUrlFor(room.counterpart.profile_image_url)
               const preview = room.previewMessage
               const wasFlagged = preview?.safety_status === 'flagged'
               return (
@@ -432,7 +432,7 @@ export default function DefaultChatScreen({ onTabChange, targetUser, onTargetUse
         <div className={styles.chatList}>
           {filteredRooms.map((room) => {
             const nickname = room.counterpart.nickname
-            const avatarUrl = avatarUrlFor(room.counterpart.profile_image_url, String(room.counterpart.id ?? nickname))
+            const avatarUrl = avatarUrlFor(room.counterpart.profile_image_url)
             const unreadCount = room.unread_count
             const unreadLabel = unreadCount > 99 ? '99+' : String(unreadCount)
             return (

@@ -292,7 +292,7 @@ export default function BlindChatScreen({ onTabChange, targetUser, onTargetUserC
           <div className={styles.chatList}>
             {rooms.map((room) => {
               const nickname = room.counterpart.nickname
-              const avatarUrl = avatarUrlFor(room.counterpart.profile_image_url, String(room.counterpart.id ?? nickname))
+              const avatarUrl = avatarUrlFor(room.counterpart.profile_image_url)
               const isRead = room.unread_count === 0
               const unreadCount = room.unread_count
               return (
@@ -352,7 +352,7 @@ export default function BlindChatScreen({ onTabChange, targetUser, onTargetUserC
         <div className={styles.requestList}>
           {requests.map((room) => {
             const nickname = room.counterpart.nickname
-            const avatarUrl = avatarUrlFor(room.counterpart.profile_image_url, String(room.counterpart.id ?? nickname))
+            const avatarUrl = avatarUrlFor(room.counterpart.profile_image_url)
             const preview = room.previewMessage
             const wasFlagged = preview?.safety_status === 'flagged'
             return (

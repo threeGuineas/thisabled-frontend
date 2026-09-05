@@ -248,7 +248,7 @@ export default function HearingMyScreen({ onTabChange, onLoggedOut, onModeChange
           <div className={styles.profileRow}>
             <div className={styles.profileInfo}>
               {me?.profile_image_url ? (
-                <img src={avatarUrlFor(me.profile_image_url, me.id)} alt="" className={styles.avatar} />
+                <img src={avatarUrlFor(me.profile_image_url)} alt="" className={styles.avatar} />
               ) : (
                 <div className={`${styles.avatar} bg-[#4C7DFF] flex items-center justify-center rounded-full text-white font-bold text-xl`}>
                   {me ? me.nickname[0].toUpperCase() : '?'}
@@ -601,7 +601,7 @@ function ProfileEditView({ me, onSaved, onBack }: ProfileEditViewProps) {
     }
   }
 
-  const avatarSrc = photoPreview ?? (me.profile_image_url ? avatarUrlFor(me.profile_image_url, me.id) : null)
+  const avatarSrc = photoPreview ?? (me.profile_image_url ? avatarUrlFor(me.profile_image_url) : null)
 
   return (
     <div className={styles.subContainer}>
@@ -906,7 +906,7 @@ interface ContactConfirmTarget {
 }
 
 function contactAvatarFor(author: Author): string {
-  return avatarUrlFor(author.profile_image_url, String(author.id ?? author.nickname))
+  return avatarUrlFor(author.profile_image_url)
 }
 
 function ContactsManageView({ onBack }: ContactsManageViewProps) {
