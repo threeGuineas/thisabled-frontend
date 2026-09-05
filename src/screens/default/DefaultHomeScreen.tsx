@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './DefaultHomeScreen.styles'
-import BottomNav, { type Tab } from '../../components/BottomNav'
+import BottomNav from '../../components/BottomNav'
 import DefaultPostDetailScreen from './DefaultPostDetailScreen'
 import DefaultWriteScreen from './DefaultWriteScreen'
 import DefaultMyScreen from './DefaultMyScreen'
 import DefaultChatScreen from './DefaultChatScreen'
 import DefaultFriendScreen from './DefaultFriendScreen'
 import { useProfileModal } from '../../hooks/useProfileModal'
+import { usePersistedTab } from '../../hooks/usePersistedTab'
 import type { ProfileModalUser } from '../../components/BlindUserProfileModal'
 import { getFeed, likePost, unlikePost, type Post, type Author } from '../../services/posts'
 import { getMe, type MeProfile } from '../../services/users'
@@ -36,7 +37,7 @@ interface Props {
 }
 
 export default function DefaultHomeScreen({ onLoggedOut, onModeChanged }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('home')
+  const [activeTab, setActiveTab] = usePersistedTab()
   const [activeFilter, setActiveFilter] = useState('전체')
   const [searchQuery, setSearchQuery] = useState('')
   const [activePostId, setActivePostId] = useState<string | null>(null)

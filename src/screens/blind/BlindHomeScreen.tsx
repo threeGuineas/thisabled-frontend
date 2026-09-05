@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './BlindHomeScreen.styles'
-import BottomNav, { type Tab } from '../../components/BottomNav'
+import BottomNav from '../../components/BottomNav'
 import BlindCommentsScreen from './BlindCommentsScreen'
 import BlindWriteScreen from './BlindWriteScreen'
 import BlindMyScreen from './BlindMyScreen'
 import BlindChatScreen from './BlindChatScreen'
 import BlindFriendScreen from './BlindFriendScreen'
 import { useProfileModal } from '../../hooks/useProfileModal'
+import { usePersistedTab } from '../../hooks/usePersistedTab'
 import type { ProfileModalUser } from '../../components/BlindUserProfileModal'
 import { getFeed, getPost, likePost, unlikePost, type Post, type Author, type PostMediaItem } from '../../services/posts'
 import { getMe, type MeProfile } from '../../services/users'
@@ -42,7 +43,7 @@ interface Props {
 }
 
 export default function BlindHomeScreen({ onLoggedOut, onModeChanged }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('home')
+  const [activeTab, setActiveTab] = usePersistedTab()
   const [activeFilter, setActiveFilter] = useState('전체')
   const [activePostId, setActivePostId] = useState<string | null>(null)
   const [showWrite, setShowWrite] = useState(false)
