@@ -22,7 +22,7 @@ import searchWIcon from '../../assets/images/search-w.svg'
 type FriendTab = 'list' | 'request'
 
 function avatarFor(author: Author): string {
-  return avatarUrlFor(author.profile_image_url, String(author.id ?? author.nickname))
+  return avatarUrlFor(author.profile_image_url)
 }
 
 interface Props {

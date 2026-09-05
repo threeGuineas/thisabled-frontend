@@ -63,7 +63,7 @@ export default function DevChatRoomScreen({ room, onBack }: Props) {
   const messageListRef = useRef<HTMLDivElement>(null)
 
   const nickname = currentRoom.counterpart.nickname
-  const avatarUrl = avatarUrlFor(currentRoom.counterpart.profile_image_url, String(currentRoom.counterpart.id ?? nickname))
+  const avatarUrl = avatarUrlFor(currentRoom.counterpart.profile_image_url)
 
   const alreadySentInRequest = currentRoom.state === 'request' && messages.some((m) => m.mine)
   const canSendText = currentRoom.state === 'active' || (currentRoom.state === 'request' && !alreadySentInRequest)

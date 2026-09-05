@@ -71,7 +71,7 @@ export default function DefaultChatRoomScreen({ room, theme = 'default', onBack 
   const prevScrollHeightRef = useRef<number | null>(null)
 
   const nickname = currentRoom.counterpart.nickname
-  const avatarUrl = avatarUrlFor(currentRoom.counterpart.profile_image_url, String(currentRoom.counterpart.id ?? nickname))
+  const avatarUrl = avatarUrlFor(currentRoom.counterpart.profile_image_url)
 
   // 요청(비친구) 방에서는 내가 요청자일 때만 이 화면을 볼 수 있고, 수락 전에는 1건만 보낼 수 있다
   const alreadySentInRequest = currentRoom.state === 'request' && messages.some((m) => m.mine)

@@ -160,7 +160,7 @@ export default function DevPostDetailScreen({ post, me, onBack, onToggleLike, on
 
   const isAuthorMine = !!(me && post.author.id && String(post.author.id) === String(me.id))
   const authorNickname = isAuthorMine ? me!.nickname : post.author.nickname
-  const authorAvatarUrl = avatarUrlFor(post.author.profile_image_url, String(post.author.id ?? post.id))
+  const authorAvatarUrl = avatarUrlFor(post.author.profile_image_url)
   const handleOpenAuthorProfile = () => {
     if (isAuthorMine) return
     openProfile({ id: post.author.id, nickname: authorNickname, bio: undefined, avatarUrl: authorAvatarUrl })
@@ -293,7 +293,7 @@ export default function DevPostDetailScreen({ post, me, onBack, onToggleLike, on
               const authorId = comment.author.id
               const isMine = !!(me && authorId && String(authorId) === String(me.id))
               const nickname = isMine ? me!.nickname : comment.author.nickname
-              const avatarUrl = avatarUrlFor(comment.author.profile_image_url, String(authorId ?? comment.id))
+              const avatarUrl = avatarUrlFor(comment.author.profile_image_url)
               const handleOpenProfile = () => {
                 if (isMine) return
                 openProfile({ id: authorId, nickname, bio: undefined, avatarUrl })

@@ -23,7 +23,7 @@ import backIcon from '../../assets/images/back.svg'
 type ScreenView = 'list' | 'requests'
 
 function avatarFor(author: Author): string {
-  return avatarUrlFor(author.profile_image_url, String(author.id ?? author.nickname))
+  return avatarUrlFor(author.profile_image_url)
 }
 
 interface Props {
