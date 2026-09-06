@@ -43,7 +43,7 @@ const styles = {
 
   // 글 카드
   card: [
-    'w-[calc(100vw-2rem)] flex-shrink-0 snap-center rounded-2xl border border-yellow-400',
+    'w-[calc(min(100vw,480px)_-_2rem)] flex-shrink-0 snap-center rounded-2xl border border-yellow-400',
     'bg-[#111111] px-4 py-4 flex flex-col gap-3',
   ].join(' '),
 
